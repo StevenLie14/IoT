@@ -1,0 +1,103 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { SignedOutError, api } from '@/lib/client/api';
+import type { Health, LogEvent, Prediction, Reading, Stats } from '@/lib/client/types';
+
+type LatestResponse = {
+  reading: Reading | null;
+  ml: { prediction: string; confidence?: number | null; model?: string } | null;
+  health: Health;
+};
+
+const MAX_EVENTS = 200;
+const MAX_RECENT = 60;
+
+function laptopPrediction(ml: NonNullable<LatestResponse['ml']>): Prediction {
+  return {
+    prediction: ml.prediction,
+    confidence: ml.confidence,
+    source: ml.model ? `${ml.model} on laptop` : 'model on laptop',
+  };
+}
+
+export function useLiveData() {
+  const [reading, setReading] = useState<Reading | null>(null);
+  const [recent, setRecent] = useState<Reading[]>([]);
+  const [lastReadingAt, setLastReadingAt] = useState(0);
+  const [health, setHealth] = useState<Health | null>(null);
+  const [laptopModel, setLaptopModel] = useState<Prediction | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [events, setEvents] = useState<LogEvent[]>([]);
+  const [error, setError] = useState('');
+
+  const refreshStats = useCallback(async () => {
+    setStats(await api<Stats>('/api/stats'));
+  }, []);
+
+  const addReading = useCallback((next: Reading) => {
+    setReading(next);
+    setLastReadingAt(Date.now());
+    setRecent((list) => [...list, next].slice(-MAX_RECENT));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitialData() {
+      try {
+        const latest = await api<LatestResponse>('/api/latest');
+        const history = await api<Reading[]>('/api/history?minutes=10');
+        const pastEvents = await api<LogEvent[]>('/api/events?limit=100');
+        if (cancelled) return;
+
+        setRecent(history.slice(-MAX_RECENT));
+        if (latest.reading) {
+          setReading(latest.reading);
+          setLastReadingAt(Date.now());
+        }
+        if (latest.ml) setLaptopModel(laptopPrediction(latest.ml));
+        setHealth(latest.health);
+        setEvents(pastEvents);
+        await refreshStats();
+      } catch (err) {
+        if (!(err instanceof SignedOutError)) setError(`Could not load data: ${(err as Error).message}`);
+      }
+    }
+
+    loadInitialData();
+
+    const stream = new EventSource('/api/stream');
+    stream.addEventListener('reading', (message) => addReading(JSON.parse(message.data)));
+    stream.addEventListener('health', (message) => setHealth(JSON.parse(message.data)));
+    stream.addEventListener('ml', (message) => setLaptopModel(laptopPrediction(JSON.parse(message.data))));
+    stream.addEventListener('event', (message) => {
+      const event = JSON.parse(message.data);
+      setEvents((list) => [event, ...list].slice(0, MAX_EVENTS));
+    });
+
+    const statsTimer = setInterval(() => refreshStats().catch(() => {}), 15000);
+
+    return () => {
+      cancelled = true;
+      stream.close();
+      clearInterval(statsTimer);
+    };
+  }, [addReading, refreshStats]);
+
+  const deviceModel: Prediction | null = reading?.ml
+    ? { prediction: reading.ml, source: 'decision tree on ESP32' }
+    : null;
+
+  return {
+    reading,
+    recent,
+    lastReadingAt,
+    health,
+    setHealth,
+    prediction: deviceModel ?? laptopModel,
+    stats,
+    events,
+    error,
+  };
+}
