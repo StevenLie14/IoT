@@ -13,6 +13,7 @@ iot/
 │   ├─ lib/                 Database, MQTT ingest, login
 │   ├─ instrumentation.ts   Menyalakan koneksi MQTT dan database saat server start
 │   └─ tools/simulate.js    ESP32 palsu untuk tes tanpa hardware
+├─ nodered/                 Dashboard Node-RED (Dashboard 2.0) dari topik MQTT yang sama
 └─ ml/                      Machine learning (Python)
     ├─ train_classifier.py  Klasifikasi kondisi air: clear / slightly_turbid / dirty
     ├─ anomaly_detection.py Deteksi anomali sensor
@@ -27,7 +28,7 @@ iot/
 | Minimal 2 aktuator, rule-based | Pompa buang dan pompa isi (relay), buzzer, dan OLED. Aturan R1 (skor < 60 tiga kali → ganti air 10/20/30%), R2 (selisih suhu), R3 (volume), R7 (timeout 3 menit), R10 (cooldown) |
 | MQTT | `TOPIC_BASE/data` tiap 5 detik, `/event`, `/cmd`, `/status` |
 | Penyimpanan terus-menerus | PostgreSQL: tabel `readings` dan `events` |
-| Dashboard | Nilai live, status aktuator, grafik riwayat, tombol kontrol, log event |
+| Dashboard | Nilai live, status aktuator, grafik riwayat, tombol kontrol, log event. Ada juga dashboard Node-RED di `nodered/` |
 | Dataset minimal 1.000 baris | Ekspor CSV dari dashboard. 1.000 baris = sekitar 83 menit logging |
 
 ## 1. Firmware ESP32
@@ -85,6 +86,20 @@ npm run sim
 ```
 
 Kalau Wi-Fi kampus memblokir MQTT (port 1883), pakai hotspot HP untuk ESP32 dan laptop.
+
+## 2b. Dashboard Node-RED
+
+Flow di `nodered/flows.json` subscribe ke `TOPIC_BASE/data` dan `/status` di broker.hivemq.com, lalu menampilkan gauge (skor, TDS, turbidity, suhu), status pompa, grafik 1 jam terakhir, dan tombol perintah (ganti air 20%, stop, reset, tes buzzer, mode auto) yang dikirim ke `TOPIC_BASE/cmd`. Firmware tidak perlu diubah, dan bisa jalan bersamaan dengan dashboard Next.js.
+
+Butuh Node.js 18 atau lebih baru:
+
+```bash
+cd nodered
+npm install
+npm start
+```
+
+Buka http://localhost:1880/dashboard untuk dashboard, dan http://localhost:1880 untuk editor flow. Kalau `TOPIC_BASE` di `config.h` diganti, ganti juga topiknya di node `data`, `status` dan `cmd`.
 
 ## 3. Mengumpulkan dataset
 

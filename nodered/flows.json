@@ -1,0 +1,873 @@
+[
+  {
+    "id": "flow_main",
+    "type": "tab",
+    "label": "Water Quality",
+    "disabled": false,
+    "info": "Subscribes to the ESP32 MQTT topics and shows them on Dashboard 2.0 at /dashboard."
+  },
+  {
+    "id": "broker",
+    "type": "mqtt-broker",
+    "name": "HiveMQ public",
+    "broker": "broker.hivemq.com",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "closeTopic": "",
+    "willTopic": ""
+  },
+  {
+    "id": "base",
+    "type": "ui-base",
+    "name": "IoT Water Quality",
+    "path": "/dashboard",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "navigationStyle": "default",
+    "titleBarStyle": "default"
+  },
+  {
+    "id": "theme",
+    "type": "ui-theme",
+    "name": "Plain",
+    "colors": {
+      "surface": "#3a4450",
+      "primary": "#3a6ea5",
+      "bgPage": "#e8e8e8",
+      "groupBg": "#ffffff",
+      "groupOutline": "#c8c8c8"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "4px",
+      "widgetGap": "12px"
+    }
+  },
+  {
+    "id": "page",
+    "type": "ui-page",
+    "name": "Monitoring",
+    "ui": "base",
+    "path": "/monitoring",
+    "icon": "water",
+    "layout": "grid",
+    "theme": "theme",
+    "breakpoints": [
+      {
+        "name": "Default",
+        "px": "0",
+        "cols": "3"
+      },
+      {
+        "name": "Tablet",
+        "px": "576",
+        "cols": "6"
+      },
+      {
+        "name": "Small Desktop",
+        "px": "768",
+        "cols": "9"
+      },
+      {
+        "name": "Desktop",
+        "px": "1024",
+        "cols": "12"
+      }
+    ],
+    "order": 1,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "g_read",
+    "type": "ui-group",
+    "name": "Readings",
+    "page": "page",
+    "width": "12",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "g_status",
+    "type": "ui-group",
+    "name": "Status",
+    "page": "page",
+    "width": "4",
+    "height": "1",
+    "order": 2,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "g_ctrl",
+    "type": "ui-group",
+    "name": "Controls",
+    "page": "page",
+    "width": "4",
+    "height": "1",
+    "order": 3,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "g_trend",
+    "type": "ui-group",
+    "name": "Trends",
+    "page": "page",
+    "width": "4",
+    "height": "1",
+    "order": 4,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "in_data",
+    "type": "mqtt in",
+    "z": "flow_main",
+    "name": "data",
+    "topic": "iot-project/steven-2802941592/data",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 160,
+    "wires": [
+      [
+        "split"
+      ]
+    ]
+  },
+  {
+    "id": "split",
+    "type": "function",
+    "z": "flow_main",
+    "name": "split reading",
+    "func": "const d = msg.payload || {};\nconst onOff = (v) => (v ? 'ON' : 'off');\nconst temp = d.t_tank === null || d.t_tank === undefined ? null : d.t_tank;\nreturn [\n  { payload: d.score },\n  { payload: d.tds },\n  { payload: d.turb },\n  temp === null ? null : { payload: temp },\n  { payload: d.state },\n  { payload: onOff(d.drain) },\n  { payload: onOff(d.fill) },\n  { payload: d.fault || 'none' },\n  { payload: d.auto === 1 },\n  { topic: 'TDS (ppm)', payload: d.tds },\n  { topic: 'Score', payload: d.score },\n];",
+    "outputs": 11,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 160,
+    "wires": [
+      [
+        "g_score"
+      ],
+      [
+        "g_tds"
+      ],
+      [
+        "g_turb"
+      ],
+      [
+        "g_temp"
+      ],
+      [
+        "t_state"
+      ],
+      [
+        "t_drain"
+      ],
+      [
+        "t_fill"
+      ],
+      [
+        "t_fault"
+      ],
+      [
+        "sw_auto"
+      ],
+      [
+        "ch_tds"
+      ],
+      [
+        "ch_score"
+      ]
+    ]
+  },
+  {
+    "id": "g_score",
+    "type": "ui-gauge",
+    "z": "flow_main",
+    "name": "Health score",
+    "group": "g_read",
+    "order": 1,
+    "width": 3,
+    "height": 3,
+    "gtype": "gauge-half",
+    "gstyle": "rounded",
+    "title": "Health score",
+    "units": "/100",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": 0,
+        "color": "#b5462f"
+      },
+      {
+        "from": 40,
+        "color": "#c9a227"
+      },
+      {
+        "from": 60,
+        "color": "#5b8c5a"
+      }
+    ],
+    "min": 0,
+    "max": 100,
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 620,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "g_tds",
+    "type": "ui-gauge",
+    "z": "flow_main",
+    "name": "TDS",
+    "group": "g_read",
+    "order": 2,
+    "width": 3,
+    "height": 3,
+    "gtype": "gauge-half",
+    "gstyle": "rounded",
+    "title": "TDS",
+    "units": "ppm",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": 0,
+        "color": "#5b8c5a"
+      },
+      {
+        "from": 300,
+        "color": "#c9a227"
+      },
+      {
+        "from": 700,
+        "color": "#b5462f"
+      }
+    ],
+    "min": 0,
+    "max": 1000,
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 620,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "g_turb",
+    "type": "ui-gauge",
+    "z": "flow_main",
+    "name": "Turbidity index",
+    "group": "g_read",
+    "order": 3,
+    "width": 3,
+    "height": 3,
+    "gtype": "gauge-half",
+    "gstyle": "rounded",
+    "title": "Turbidity index",
+    "units": "0 = clear",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": 0,
+        "color": "#5b8c5a"
+      },
+      {
+        "from": 30,
+        "color": "#c9a227"
+      },
+      {
+        "from": 60,
+        "color": "#b5462f"
+      }
+    ],
+    "min": 0,
+    "max": 100,
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 620,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "g_temp",
+    "type": "ui-gauge",
+    "z": "flow_main",
+    "name": "Water temperature",
+    "group": "g_read",
+    "order": 4,
+    "width": 3,
+    "height": 3,
+    "gtype": "gauge-half",
+    "gstyle": "rounded",
+    "title": "Water temperature",
+    "units": "\u00b0C",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": 15,
+        "color": "#b5462f"
+      },
+      {
+        "from": 20,
+        "color": "#c9a227"
+      },
+      {
+        "from": 24,
+        "color": "#5b8c5a"
+      },
+      {
+        "from": 30,
+        "color": "#c9a227"
+      },
+      {
+        "from": 34,
+        "color": "#b5462f"
+      }
+    ],
+    "min": 15,
+    "max": 40,
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 620,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "t_state",
+    "type": "ui-text",
+    "z": "flow_main",
+    "group": "g_status",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "name": "State",
+    "label": "State",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#222222",
+    "wrapText": false,
+    "className": "",
+    "x": 620,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "t_drain",
+    "type": "ui-text",
+    "z": "flow_main",
+    "group": "g_status",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "name": "Drain pump",
+    "label": "Drain pump",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#222222",
+    "wrapText": false,
+    "className": "",
+    "x": 620,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "t_fill",
+    "type": "ui-text",
+    "z": "flow_main",
+    "group": "g_status",
+    "order": 3,
+    "width": 0,
+    "height": 0,
+    "name": "Fill pump",
+    "label": "Fill pump",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#222222",
+    "wrapText": false,
+    "className": "",
+    "x": 620,
+    "y": 280,
+    "wires": []
+  },
+  {
+    "id": "t_fault",
+    "type": "ui-text",
+    "z": "flow_main",
+    "group": "g_status",
+    "order": 4,
+    "width": 0,
+    "height": 0,
+    "name": "Fault",
+    "label": "Fault",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#222222",
+    "wrapText": false,
+    "className": "",
+    "x": 620,
+    "y": 320,
+    "wires": []
+  },
+  {
+    "id": "t_dev",
+    "type": "ui-text",
+    "z": "flow_main",
+    "group": "g_status",
+    "order": 5,
+    "width": 0,
+    "height": 0,
+    "name": "ESP32",
+    "label": "ESP32",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#222222",
+    "wrapText": false,
+    "className": "",
+    "x": 620,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "in_status",
+    "type": "mqtt in",
+    "z": "flow_main",
+    "name": "status",
+    "topic": "iot-project/steven-2802941592/status",
+    "qos": "0",
+    "datatype": "utf8",
+    "broker": "broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 380,
+    "wires": [
+      [
+        "t_dev"
+      ]
+    ]
+  },
+  {
+    "id": "sw_auto",
+    "type": "ui-switch",
+    "z": "flow_main",
+    "name": "Auto mode",
+    "label": "Auto mode",
+    "group": "g_ctrl",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "passthru": false,
+    "decouple": "true",
+    "topic": "auto",
+    "topicType": "str",
+    "style": "",
+    "className": "",
+    "layout": "row-spread",
+    "clickableArea": "switch",
+    "onvalue": "true",
+    "onvalueType": "bool",
+    "onicon": "",
+    "oncolor": "",
+    "offvalue": "false",
+    "offvalueType": "bool",
+    "officon": "",
+    "offcolor": "",
+    "x": 620,
+    "y": 440,
+    "wires": [
+      [
+        "auto_cmd"
+      ]
+    ]
+  },
+  {
+    "id": "auto_cmd",
+    "type": "function",
+    "z": "flow_main",
+    "name": "auto command",
+    "func": "msg.payload = { cmd: 'auto', on: msg.payload === true };\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 830,
+    "y": 440,
+    "wires": [
+      [
+        "out_cmd"
+      ]
+    ]
+  },
+  {
+    "id": "b_change",
+    "type": "ui-button",
+    "z": "flow_main",
+    "group": "g_ctrl",
+    "name": "Water change 20 %",
+    "label": "Water change 20 %",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "payload": "{\"cmd\": \"change\", \"pct\": 20}",
+    "payloadType": "json",
+    "topic": "cmd",
+    "topicType": "str",
+    "buttonColor": "",
+    "textColor": "",
+    "iconColor": "",
+    "enableClick": true,
+    "enablePointerdown": false,
+    "pointerdownPayload": "",
+    "pointerdownPayloadType": "str",
+    "enablePointerup": false,
+    "pointerupPayload": "",
+    "pointerupPayloadType": "str",
+    "x": 620,
+    "y": 480,
+    "wires": [
+      [
+        "out_cmd"
+      ]
+    ]
+  },
+  {
+    "id": "b_stop",
+    "type": "ui-button",
+    "z": "flow_main",
+    "group": "g_ctrl",
+    "name": "Stop pumps",
+    "label": "Stop pumps",
+    "order": 3,
+    "width": 0,
+    "height": 0,
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "#b5462f",
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "payload": "{\"cmd\": \"stop\"}",
+    "payloadType": "json",
+    "topic": "cmd",
+    "topicType": "str",
+    "buttonColor": "#b5462f",
+    "textColor": "",
+    "iconColor": "",
+    "enableClick": true,
+    "enablePointerdown": false,
+    "pointerdownPayload": "",
+    "pointerdownPayloadType": "str",
+    "enablePointerup": false,
+    "pointerupPayload": "",
+    "pointerupPayloadType": "str",
+    "x": 620,
+    "y": 520,
+    "wires": [
+      [
+        "out_cmd"
+      ]
+    ]
+  },
+  {
+    "id": "b_reset",
+    "type": "ui-button",
+    "z": "flow_main",
+    "group": "g_ctrl",
+    "name": "Reset fault",
+    "label": "Reset fault",
+    "order": 4,
+    "width": 0,
+    "height": 0,
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "payload": "{\"cmd\": \"reset\"}",
+    "payloadType": "json",
+    "topic": "cmd",
+    "topicType": "str",
+    "buttonColor": "",
+    "textColor": "",
+    "iconColor": "",
+    "enableClick": true,
+    "enablePointerdown": false,
+    "pointerdownPayload": "",
+    "pointerdownPayloadType": "str",
+    "enablePointerup": false,
+    "pointerupPayload": "",
+    "pointerupPayloadType": "str",
+    "x": 620,
+    "y": 560,
+    "wires": [
+      [
+        "out_cmd"
+      ]
+    ]
+  },
+  {
+    "id": "b_beep",
+    "type": "ui-button",
+    "z": "flow_main",
+    "group": "g_ctrl",
+    "name": "Test buzzer",
+    "label": "Test buzzer",
+    "order": 5,
+    "width": 0,
+    "height": 0,
+    "emulateClick": false,
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "className": "",
+    "icon": "",
+    "iconPosition": "left",
+    "payload": "{\"cmd\": \"beep\"}",
+    "payloadType": "json",
+    "topic": "cmd",
+    "topicType": "str",
+    "buttonColor": "",
+    "textColor": "",
+    "iconColor": "",
+    "enableClick": true,
+    "enablePointerdown": false,
+    "pointerdownPayload": "",
+    "pointerdownPayloadType": "str",
+    "enablePointerup": false,
+    "pointerupPayload": "",
+    "pointerupPayloadType": "str",
+    "x": 620,
+    "y": 600,
+    "wires": [
+      [
+        "out_cmd"
+      ]
+    ]
+  },
+  {
+    "id": "out_cmd",
+    "type": "mqtt out",
+    "z": "flow_main",
+    "name": "cmd",
+    "topic": "iot-project/steven-2802941592/cmd",
+    "qos": "1",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker",
+    "x": 1030,
+    "y": 520,
+    "wires": []
+  },
+  {
+    "id": "ch_tds",
+    "type": "ui-chart",
+    "z": "flow_main",
+    "group": "g_trend",
+    "name": "TDS (ppm), last hour",
+    "label": "TDS (ppm), last hour",
+    "order": 1,
+    "chartType": "line",
+    "category": "topic",
+    "categoryType": "msg",
+    "xAxisLabel": "",
+    "xAxisProperty": "",
+    "xAxisPropertyType": "timestamp",
+    "xAxisType": "time",
+    "xAxisFormat": "",
+    "xAxisFormatType": "auto",
+    "yAxisLabel": "",
+    "yAxisProperty": "payload",
+    "yAxisPropertyType": "msg",
+    "ymin": "",
+    "ymax": "",
+    "bins": 10,
+    "action": "append",
+    "stackSeries": false,
+    "pointShape": "circle",
+    "pointRadius": 2,
+    "showLegend": false,
+    "removeOlder": "1",
+    "removeOlderUnit": "3600",
+    "removeOlderPoints": "",
+    "colors": [
+      "#3a6ea5",
+      "#ff7f0e",
+      "#2ca02c",
+      "#d62728",
+      "#9467bd",
+      "#8c564b",
+      "#e377c2",
+      "#7f7f7f",
+      "#bcbd22"
+    ],
+    "textColor": [
+      "#666666"
+    ],
+    "textColorDefault": true,
+    "gridColor": [
+      "#e5e5e5"
+    ],
+    "gridColorDefault": true,
+    "width": 4,
+    "height": 4,
+    "className": "",
+    "interpolation": "linear",
+    "x": 620,
+    "y": 660,
+    "wires": []
+  },
+  {
+    "id": "ch_score",
+    "type": "ui-chart",
+    "z": "flow_main",
+    "group": "g_trend",
+    "name": "Health score, last hour",
+    "label": "Health score, last hour",
+    "order": 2,
+    "chartType": "line",
+    "category": "topic",
+    "categoryType": "msg",
+    "xAxisLabel": "",
+    "xAxisProperty": "",
+    "xAxisPropertyType": "timestamp",
+    "xAxisType": "time",
+    "xAxisFormat": "",
+    "xAxisFormatType": "auto",
+    "yAxisLabel": "",
+    "yAxisProperty": "payload",
+    "yAxisPropertyType": "msg",
+    "ymin": "",
+    "ymax": "",
+    "bins": 10,
+    "action": "append",
+    "stackSeries": false,
+    "pointShape": "circle",
+    "pointRadius": 2,
+    "showLegend": false,
+    "removeOlder": "1",
+    "removeOlderUnit": "3600",
+    "removeOlderPoints": "",
+    "colors": [
+      "#5b8c5a",
+      "#ff7f0e",
+      "#2ca02c",
+      "#d62728",
+      "#9467bd",
+      "#8c564b",
+      "#e377c2",
+      "#7f7f7f",
+      "#bcbd22"
+    ],
+    "textColor": [
+      "#666666"
+    ],
+    "textColorDefault": true,
+    "gridColor": [
+      "#e5e5e5"
+    ],
+    "gridColorDefault": true,
+    "width": 4,
+    "height": 4,
+    "className": "",
+    "interpolation": "linear",
+    "x": 620,
+    "y": 700,
+    "wires": []
+  }
+]
