@@ -1,122 +1,293 @@
 // AquaGuard dashboard client
-let last = null;
 const $ = (id) => document.getElementById(id);
-const fmt = (v, d = 1) => (v === null || v === undefined || Number.isNaN(v) ? '--' : Number(v).toFixed(d));
-const time = (e) => new Date(e * 1000).toLocaleTimeString();
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = (v, d = 1) => (v === null || v === undefined || Number.isNaN(Number(v)) ? '--' : Number(v).toFixed(d));
+const clock = (e) => new Date(e * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+const LABEL_NAMES = { clear: 'Clear', slightly_turbid: 'Slightly turbid', dirty: 'Dirty' };
+const TARGET_ROWS = 1000;
+
+let last = null;
+let lastAt = 0;
+let lastChange = null;
+
+// ---------- API ----------
+async function api(path, opts = {}) {
+  const res = await fetch(path, { credentials: 'same-origin', ...opts,
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  if (res.status === 401) { location.href = '/login?next=' + encodeURIComponent(location.pathname); throw new Error('signed out'); }
+  const body = res.headers.get('content-type')?.includes('json') ? await res.json() : null;
+  if (!res.ok) throw new Error(body?.error || res.statusText);
+  return body;
+}
 
 // ---------- Charts ----------
-const base = (title, yLabel) => ({
-  type: 'line', data: { labels: [], datasets: [] },
-  options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
-    plugins: { title: { display: true, text: title }, legend: { position: 'bottom', labels: { boxWidth: 12 } } },
-    scales: { x: { ticks: { maxTicksLimit: 8 } }, y: { title: { display: !!yLabel, text: yLabel } } },
-    elements: { point: { radius: 0 }, line: { borderWidth: 2, tension: 0.2 } } },
-});
-const ds = (label, color, extra = {}) => ({ label, data: [], borderColor: color, backgroundColor: color + '33', ...extra });
+const C = {
+  ink2: css('--ink-2'), ink3: css('--ink-3'), line: css('--line-2'),
+  accent: css('--accent'), ok: css('--ok'), warn: css('--warn'), bad: css('--bad'),
+};
+Chart.defaults.font.family = css('--sans');
+Chart.defaults.font.size = 11;
+Chart.defaults.color = C.ink3;
 
-const cScore = new Chart($('cScore'), base('TDS and health score'));
-cScore.data.datasets = [ds('TDS (ppm)', '#2563eb', { yAxisID: 'y' }), ds('Score', '#2e9e5b', { yAxisID: 'y1' })];
-cScore.options.scales.y1 = { position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false } };
-const cTurb = new Chart($('cTurb'), base('Turbidity', 'volts / index'));
-cTurb.data.datasets = [ds('Sensor voltage (V)', '#9333ea'), ds('Index (0-100)', '#e3a008', { yAxisID: 'y1' })];
-cTurb.options.scales.y1 = { position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false } };
-const cTemp = new Chart($('cTemp'), base('Temperature', '°C'));
-cTemp.data.datasets = [ds('Tank', '#d64545'), ds('Reservoir', '#0ea5e9')];
-const cPump = new Chart($('cPump'), base('Pumps (1 = on)'));
-cPump.data.datasets = [ds('Drain', '#d64545', { stepped: true, fill: true }), ds('Fill', '#2563eb', { stepped: true, fill: true })];
-cPump.options.scales.y = { min: 0, max: 1.2, ticks: { stepSize: 1 } };
-const charts = [cScore, cTurb, cTemp, cPump];
-
-function pushRow(r, trim = true) {
-  const lab = time(r.epoch);
-  const vals = [[r.tds, r.score], [r.turb_v, r.turb], [r.t_tank, r.t_res], [r.drain, r.fill]];
-  charts.forEach((c, i) => {
-    c.data.labels.push(lab);
-    c.data.datasets.forEach((d, j) => d.data.push(vals[i][j]));
-    if (trim && c.data.labels.length > 1500) { c.data.labels.shift(); c.data.datasets.forEach((d) => d.data.shift()); }
+function lineChart(id, sets, opts = {}) {
+  return new Chart($(id), {
+    type: 'line',
+    data: { labels: [], datasets: sets.map((s) => ({ data: [], borderWidth: 1.6, pointRadius: 0, tension: 0.25, ...s })) },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false, normalized: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: css('--ink'), titleFont: { weight: '500' }, padding: 8, cornerRadius: 4, boxPadding: 4 } },
+      scales: {
+        x: { grid: { display: false }, border: { color: C.line }, ticks: { maxTicksLimit: 6, maxRotation: 0, autoSkipPadding: 24 } },
+        y: { grid: { color: C.line }, border: { display: false }, ticks: { maxTicksLimit: 5 }, ...(opts.y || {}) },
+        ...(opts.y1 ? { y1: { position: 'right', grid: { display: false }, border: { display: false }, ticks: { maxTicksLimit: 5 }, ...opts.y1 } } : {}),
+      },
+    },
   });
 }
 
-async function loadHistory() {
-  const rows = await (await fetch('/api/history?minutes=' + $('range').value)).json();
-  charts.forEach((c) => { c.data.labels = []; c.data.datasets.forEach((d) => (d.data = [])); });
-  rows.forEach((r) => pushRow(r, false));
-  charts.forEach((c) => c.update());
-}
+const charts = {
+  score: lineChart('cScore', [
+    { label: 'Score', borderColor: C.ok, yAxisID: 'y1' },
+    { label: 'TDS (ppm)', borderColor: C.ink2, yAxisID: 'y' },
+  ], { y1: { min: 0, max: 100 } }),
+  turb: lineChart('cTurb', [
+    { label: 'Index', borderColor: C.warn, yAxisID: 'y1' },
+    { label: 'Sensor (V)', borderColor: C.ink3, yAxisID: 'y', borderDash: [3, 3] },
+  ], { y1: { min: 0, max: 100 } }),
+  temp: lineChart('cTemp', [
+    { label: 'Tank (°C)', borderColor: C.bad },
+    { label: 'Reservoir (°C)', borderColor: C.accent },
+  ]),
+  pump: lineChart('cPump', [
+    { label: 'Drain', borderColor: C.bad, backgroundColor: C.bad + '22', fill: true, stepped: true, tension: 0 },
+    { label: 'Fill', borderColor: C.accent, backgroundColor: C.accent + '22', fill: true, stepped: true, tension: 0 },
+  ], { y: { min: 0, max: 1.2, ticks: { stepSize: 1, callback: (v) => (v === 1 ? 'on' : v === 0 ? 'off' : '') } } }),
+};
+const rowValues = (r) => ({ score: [r.score, r.tds], turb: [r.turb, r.turb_v], temp: [r.t_tank, r.t_res], pump: [r.drain, r.fill] });
 
-// ---------- Cards ----------
-function showReading(r) {
-  last = r;
-  const s = r.score;
-  $('score').textContent = s ?? '--';
-  $('score').style.color = s >= 80 ? 'var(--good)' : s >= 60 ? 'var(--warn)' : 'var(--bad)';
-  $('state').textContent = 'state: ' + (r.state || '--') + (r.source === 'sim' ? '  (SIMULATOR)' : '');
-  $('temp').textContent = fmt(r.t_tank);
-  $('tres').textContent = r.t_res === null || r.t_res === undefined ? 'reservoir: not fitted' : 'reservoir: ' + fmt(r.t_res) + ' °C';
-  $('tds').textContent = fmt(r.tds, 0);
-  $('tdsv').textContent = 'probe ' + fmt(r.tds_v, 3) + ' V';
-  $('turb').textContent = fmt(r.turb, 0);
-  $('turbv').textContent = 'sensor ' + fmt(r.turb_v, 2) + ' V';
-  $('vol').textContent = fmt(r.vol_ml, 0);
-  $('flow').textContent = 'flow ' + fmt(r.flow, 2) + ' L/min (estimate)';
-  const pill = (name, on, cls = 'active') => `<span class="pill ${on ? cls : ''}">${name}: ${on ? 'ON' : 'off'}</span>`;
-  $('act').innerHTML = pill('Drain pump', r.drain) + pill('Fill pump', r.fill) + pill('Buzzer', r.buzzer) +
-    `<span class="pill ${r.state === 'fault' ? 'fault' : r.state !== 'idle' ? 'active' : ''}">State: ${r.state}</span>`;
-  $('bAuto').textContent = 'Auto: ' + (r.auto ? 'ON' : 'off');
-  $('bDemo').textContent = 'Demo: ' + (r.demo ? 'ON' : 'off');
-  $('fault').textContent = r.fault ? 'Fault: ' + r.fault : '';
-  if (r.ml) {   // prediction made on the ESP32 itself
-    $('ml').textContent = r.ml;
-    $('mlsub').textContent = 'decision tree on ESP32 · ' + time(r.epoch);
+function addRow(r, trim = true) {
+  const v = rowValues(r);
+  for (const [k, c] of Object.entries(charts)) {
+    c.data.labels.push(clock(r.epoch));
+    c.data.datasets.forEach((d, i) => d.data.push(v[k][i]));
+    if (trim && c.data.labels.length > 1500) { c.data.labels.shift(); c.data.datasets.forEach((d) => d.data.shift()); }
   }
 }
 
+let rangeMin = 30;
+async function loadHistory() {
+  const rows = await api('/api/history?minutes=' + rangeMin);
+  for (const c of Object.values(charts)) { c.data.labels = []; c.data.datasets.forEach((d) => (d.data = [])); }
+  rows.forEach((r) => addRow(r, false));
+  Object.values(charts).forEach((c) => c.update());
+  rows.slice(-60).forEach(pushSpark);
+  drawSparks();
+}
+
+// ---------- Sparklines ----------
+const spark = { temp: [], tds: [], turb: [], vol: [] };
+const sparkEls = { temp: 'spTemp', tds: 'spTds', turb: 'spTurb', vol: 'spVol' };
+function pushSpark(r) {
+  const v = { temp: r.t_tank, tds: r.tds, turb: r.turb, vol: r.vol_ml };
+  for (const k in spark) { spark[k].push(v[k]); if (spark[k].length > 60) spark[k].shift(); }
+}
+function drawSparks() {
+  for (const [k, id] of Object.entries(sparkEls)) {
+    const cv = $(id), dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (!w) continue;
+    cv.width = w * dpr; cv.height = h * dpr;
+    const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, w, h);
+    const pts = spark[k].filter((v) => v !== null && v !== undefined);
+    if (pts.length < 2) continue;
+    let min = Math.min(...pts), max = Math.max(...pts);
+    if (max - min < 1e-6) { min -= 1; max += 1; }
+    ctx.strokeStyle = C.ink3; ctx.lineWidth = 1.2; ctx.beginPath();
+    pts.forEach((v, i) => {
+      const x = (i / (pts.length - 1)) * (w - 2) + 1;
+      const y = h - 2 - ((v - min) / (max - min)) * (h - 4);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+  }
+}
+window.addEventListener('resize', drawSparks);
+
+// ---------- Readings ----------
+function scoreClass(s) { return s >= 80 ? 'ok' : s >= 60 ? 'warn' : 'bad'; }
+function scoreWord(s) { return s >= 80 ? 'Good' : s >= 60 ? 'Fair' : 'Poor, change due'; }
+
+function setActuator(id, on, text) {
+  const el = $(id);
+  el.classList.toggle('on', !!on);
+  el.querySelector('b').textContent = text ?? (on ? 'On' : 'Off');
+}
+
+function showReading(r) {
+  last = r; lastAt = Date.now();
+  const s = r.score;
+  const panel = $('scorePanel');
+  panel.classList.remove('ok', 'warn', 'bad');
+  if (s !== null && s !== undefined) {
+    panel.classList.add(scoreClass(s));
+    $('score').textContent = s;
+    $('scoreWord').textContent = scoreWord(s);
+    $('meter').style.width = Math.max(0, Math.min(100, s)) + '%';
+  }
+  $('stateText').textContent = r.state || '--';
+  $('kvAuto').textContent = r.auto ? (r.demo ? 'On, demo timing' : 'On') : 'Off';
+  $('kvSource').textContent = r.source === 'sim' ? 'Simulator' : 'ESP32';
+
+  $('temp').textContent = fmt(r.t_tank);
+  $('tempSub').textContent = r.t_res === null || r.t_res === undefined ? 'reservoir not fitted' : `reservoir ${fmt(r.t_res)} °C`;
+  $('tds').textContent = fmt(r.tds, 0);
+  $('tdsSub').textContent = `probe ${fmt(r.tds_v, 3)} V`;
+  $('turb').textContent = fmt(r.turb, 0);
+  $('turbSub').textContent = `sensor ${fmt(r.turb_v, 2)} V`;
+  $('vol').textContent = fmt(r.vol_ml, 0);
+  $('volSub').textContent = r.drain ? `draining ${fmt(r.flow, 2)} L/min` : r.fill ? 'refilling' : 'pump idle';
+
+  if (r.ml) showModel({ prediction: r.ml, where: 'decision tree on ESP32', epoch: r.epoch });
+
+  setActuator('aDrain', r.drain);
+  setActuator('aFill', r.fill);
+  setActuator('aBuzzer', r.buzzer);
+  const st = $('aState');
+  st.classList.toggle('on', r.state && r.state !== 'idle' && r.state !== 'fault');
+  st.classList.toggle('fault', r.state === 'fault');
+  st.querySelector('b').textContent = r.state || '--';
+  $('fault').textContent = r.fault ? `Fault: ${r.fault}. Pumps are locked until you reset.` : '';
+  $('fault').classList.toggle('show', !!r.fault);
+
+  const tag = $('modeTag');
+  tag.textContent = r.state === 'fault' ? 'Fault' : r.demo ? 'Demo' : r.auto ? 'Auto' : 'Manual';
+  tag.className = 'tag' + (r.state === 'fault' ? ' bad' : r.auto ? ' accent' : '');
+  if (document.activeElement !== $('swAuto')) $('swAuto').checked = !!r.auto;
+  if (document.activeElement !== $('swDemo')) $('swDemo').checked = !!r.demo;
+}
+
+function showModel(p) {
+  const tile = $('modelTile');
+  tile.classList.remove('clear', 'slightly_turbid', 'dirty');
+  tile.classList.add(p.prediction);
+  $('ml').textContent = LABEL_NAMES[p.prediction] || p.prediction || '--';
+  const conf = p.confidence !== undefined && p.confidence !== null ? ` · ${(p.confidence * 100).toFixed(0)}%` : '';
+  $('mlSub').textContent = `${p.where || 'model on laptop'}${conf}`;
+}
+
+// "last reading 4 s ago"
+setInterval(() => {
+  if (!lastAt) return;
+  const s = Math.round((Date.now() - lastAt) / 1000);
+  $('tLast').textContent = s < 60 ? `Last reading ${s}s ago` : `Last reading ${Math.round(s / 60)} min ago`;
+}, 1000);
+
+// ---------- Event log ----------
 function addLog(e, top = true) {
-  const div = document.createElement('div');
-  div.innerHTML = `<span class="muted">${time(e.epoch)}</span> <b>${e.type}</b> ${e.name ?? ''} ${e.value ?? ''} <span class="muted">${e.detail ?? ''}</span>`;
-  top ? $('log').prepend(div) : $('log').append(div);
-  while ($('log').children.length > 200) $('log').lastChild.remove();
+  const body = $('log');
+  if (body.querySelector('.empty')) body.innerHTML = '';
+  const tr = document.createElement('tr');
+  const detail = [e.name, e.value, e.detail].filter((x) => x !== null && x !== undefined && x !== '').join(' · ');
+  tr.innerHTML = `<td class="time"></td><td class="type"><span></span></td><td></td>`;
+  tr.children[0].textContent = clock(e.epoch);
+  tr.children[1].firstChild.textContent = e.type;
+  tr.children[1].firstChild.className = 't-' + e.type;
+  tr.children[2].textContent = detail;
+  top ? body.prepend(tr) : body.append(tr);
+  while (body.children.length > 200) body.lastChild.remove();
+  if (e.type === 'state' && String(e.detail || '').startsWith('change done')) setLastChange(e);
+}
+function setLastChange(e) {
+  if (lastChange && lastChange.epoch >= e.epoch) return;
+  lastChange = e;
+  $('kvChange').textContent = `${String(e.detail).replace('change done ', '')} at ${clock(e.epoch)}`;
 }
 
+// ---------- Dataset ----------
 async function loadStats() {
-  const s = await (await fetch('/api/stats')).json();
-  $('nrec').textContent = s.n;
-  $('nsplit').textContent = `device ${s.device || 0} · simulator ${s.sim || 0} · events ${s.events}` +
-    (s.first ? ` · since ${new Date(s.first * 1000).toLocaleString()}` : '');
-  $('labelcount').textContent = s.labels.length ? 'Labelled device rows: ' + s.labels.map((l) => `${l.label} ${l.n}`).join(', ') : '';
+  const s = await api('/api/stats');
+  const n = s.device || 0;
+  $('nrec').textContent = n.toLocaleString();
+  $('progress').style.width = Math.min(100, (n / TARGET_ROWS) * 100) + '%';
+  $('progressText').textContent = n >= TARGET_ROWS ? 'Target of 1,000 records reached' : `${(TARGET_ROWS - n).toLocaleString()} more to reach 1,000`;
+  if (s.sim) $('progressText').textContent += ` · ${s.sim.toLocaleString()} simulator rows excluded`;
+  $('since').textContent = s.first ? 'since ' + new Date(s.first * 1000).toLocaleDateString() : '';
+  $('labelCounts').textContent = s.labels.length ? s.labels.map((l) => `${LABEL_NAMES[l.label] || l.label}: ${l.n}`).join('   ') : '';
 }
 
-// ---------- Actions ----------
-async function cmd(body) {
-  const r = await fetch('/api/cmd', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if (!r.ok) alert('Command failed: ' + (await r.json()).error);
+// ---------- Commands ----------
+let fbTimer;
+function feedback(text, kind = '') {
+  const el = $('feedback');
+  el.textContent = text; el.className = 'feedback ' + kind;
+  clearTimeout(fbTimer); fbTimer = setTimeout(() => { el.textContent = ''; el.className = 'feedback'; }, 5000);
 }
-async function setLabel(label) {
-  await fetch('/api/label', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label }) });
+async function send(body, okText) {
+  try { await api('/api/cmd', { method: 'POST', body: JSON.stringify(body) }); feedback(okText, 'ok'); return true; }
+  catch (e) { if (e.message !== 'signed out') feedback(`Could not send command: ${e.message}`, 'error'); return false; }
+}
+document.querySelectorAll('[data-change]').forEach((b) => b.addEventListener('click', () =>
+  send({ cmd: 'change', pct: Number(b.dataset.change) }, `Water change ${b.dataset.change}% requested`)));
+document.querySelectorAll('[data-test]').forEach((b) => b.addEventListener('click', () =>
+  send({ cmd: b.dataset.test, sec: 3 }, `${b.dataset.test === 'drain' ? 'Drain' : 'Fill'} pump test started`)));
+document.querySelectorAll('[data-cmd]').forEach((b) => b.addEventListener('click', () =>
+  send({ cmd: b.dataset.cmd }, { stop: 'Stop sent', reset: 'Reset sent', beep: 'Beep sent' }[b.dataset.cmd])));
+for (const [id, cmd, name] of [['swAuto', 'auto', 'Automatic water change'], ['swDemo', 'demo', 'Demo timing']]) {
+  $(id).addEventListener('change', async (ev) => {
+    const on = ev.target.checked;
+    if (!(await send({ cmd, on }, `${name} ${on ? 'on' : 'off'}`))) ev.target.checked = !on;
+  });
 }
 
-// ---------- Live stream ----------
-const es = new EventSource('/api/stream');
-es.addEventListener('reading', (m) => { const r = JSON.parse(m.data); showReading(r); pushRow(r); charts.forEach((c) => c.update()); });
-es.addEventListener('event', (m) => addLog(JSON.parse(m.data)));
-function showMl(p) {
-  $('ml').textContent = p.prediction ?? '--';
-  $('mlsub').textContent = (p.confidence !== undefined && p.confidence !== null ? `confidence ${(p.confidence * 100).toFixed(0)}% · ` : '') + time(p.epoch);
+document.querySelectorAll('#labels input').forEach((i) => i.addEventListener('change', async () => {
+  try { await api('/api/label', { method: 'POST', body: JSON.stringify({ label: i.value }) }); feedback(i.value ? `Labelling new readings as "${LABEL_NAMES[i.value]}"` : 'Labelling turned off', 'ok'); }
+  catch (e) { feedback(`Could not set label: ${e.message}`, 'error'); }
+}));
+function showLabel(label) {
+  const input = document.querySelector(`#labels input[value="${label || ''}"]`);
+  if (input) input.checked = true;
 }
-es.addEventListener('ml', (m) => showMl(JSON.parse(m.data)));
-es.addEventListener('health', (m) => {
-  const h = JSON.parse(m.data);
-  $('dMqtt').className = 'dot ' + (h.mqtt ? 'on' : 'off');
-  $('dDev').className = 'dot ' + (h.device === 'online' ? 'on' : 'off');
-  $('dData').className = 'dot ' + (h.dataFresh ? 'on' : 'off');
-  if (document.activeElement !== $('label')) $('label').value = h.label || '';
+
+document.querySelectorAll('#range button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('#range button').forEach((x) => x.classList.toggle('active', x === b));
+  rangeMin = Number(b.dataset.min);
+  loadHistory();
+}));
+
+$('logout').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+  location.href = '/login';
 });
 
+// ---------- Live stream ----------
+function health(h) {
+  $('dMqtt').className = 'dot ' + (h.mqtt ? 'on' : 'off');
+  $('tMqtt').textContent = h.mqtt ? 'MQTT connected' : 'MQTT down';
+  $('dDev').className = 'dot ' + (h.device === 'online' ? 'on' : 'off');
+  $('tDev').textContent = h.device === 'online' ? 'ESP32 online' : 'ESP32 offline';
+  showLabel(h.label);
+}
+const es = new EventSource('/api/stream');
+es.addEventListener('reading', (m) => {
+  const r = JSON.parse(m.data);
+  showReading(r); addRow(r); pushSpark(r);
+  Object.values(charts).forEach((c) => c.update('none')); drawSparks();
+});
+es.addEventListener('event', (m) => addLog(JSON.parse(m.data)));
+es.addEventListener('ml', (m) => { const p = JSON.parse(m.data); showModel({ ...p, where: p.model ? `${p.model} on laptop` : 'model on laptop' }); });
+es.addEventListener('health', (m) => health(JSON.parse(m.data)));
+
 (async () => {
-  const l = await (await fetch('/api/latest')).json();
+  const session = await api('/api/session');
+  $('logout').hidden = !session.auth;
+  const l = await api('/api/latest');
   if (l.reading) showReading(l.reading);
-  if (l.ml) showMl(l.ml);
-  (await (await fetch('/api/events?limit=50')).json()).forEach((e) => addLog(e, false));
-  loadHistory(); loadStats();
-  setInterval(loadStats, 10000);
-})();
+  if (l.ml) showModel({ ...l.ml, where: l.ml.model ? `${l.ml.model} on laptop` : 'model on laptop' });
+  health(l.health);
+  const ev = await api('/api/events?limit=100');
+  ev.forEach((e) => addLog(e, false));
+  $('logCount').textContent = ev.length ? `latest ${ev.length}` : '';
+  await Promise.all([loadHistory(), loadStats()]);
+  setInterval(loadStats, 15000);
+})().catch((e) => { if (e.message !== 'signed out') feedback(`Could not load data: ${e.message}`, 'error'); });
