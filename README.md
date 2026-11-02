@@ -108,6 +108,22 @@ pembacaan yang hampir sama tidak bocor ke data uji. Hasil di `ml/results/`:
 `metrics.md` (tabel akurasi dan F1, siap ditempel ke laporan), `confusion_matrix.png`,
 `feature_importance.png`, `decision_tree_rules.txt`. Model terbaik disimpan di `ml/models/`.
 
+### Model di ESP32 (decision tree)
+Selain lewat laptop, model bisa jalan langsung di ESP32 sehingga tetap bekerja tanpa Wi-Fi:
+
+```bash
+cd ml
+python export_tree.py --csv aquaguard_dataset_2026-11-01.csv
+```
+
+Skrip ini melatih decision tree (fitur TDS dan turbidity, kedalaman maksimal 4), menampilkan akurasi
+di data uji, lalu menulis `firmware/aquaguard/water_model.h` berisi aturan `if-else`. Upload ulang firmware.
+ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY), mengirimnya di kolom `ml` lewat MQTT,
+dan dashboard menampilkannya di kartu "AI prediction". Kolom `ml` juga ikut di CSV.
+
+Sebelum model dibuat, `water_model.h` berisi placeholder sehingga firmware tetap bisa di-compile.
+Latih dan ekspor ulang setiap kali sensor dikalibrasi ulang.
+
 **anomaly_detection.py** menandai nilai di luar rentang, sensor yang nyangkut (nilai sama persis 2 menit),
 lonjakan mendadak, dan pembacaan aneh menurut Isolation Forest. Hasil: `results/anomalies.csv` dan `anomalies.png`.
 
