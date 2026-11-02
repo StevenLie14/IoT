@@ -1,0 +1,8 @@
+node_modules/
+*.db
+*.db-*
+.env
+ml/models/
+ml/results/
+__pycache__/
+*.csv
