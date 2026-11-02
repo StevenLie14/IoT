@@ -7,8 +7,8 @@
 //   MQTT_URL    default mqtt://broker.hivemq.com:1883
 //   TOPIC_BASE  default aquaguard/steven-2802941592  (must match firmware config.h)
 //   PORT        default 3000
-//   DASHBOARD_USER / DASHBOARD_PASSWORD  when the password is set, the whole dashboard and API
-//               require HTTP Basic login (use this when the dashboard is on the internet)
+//   DASHBOARD_USER / DASHBOARD_PASSWORD  when the password is set, the dashboard needs a login
+//               (sign-in page for browsers, HTTP Basic for scripts). Use this on the internet.
 
 const path = require('path');
 const crypto = require('crypto');
@@ -138,22 +138,87 @@ app.use(express.json());
 
 app.get('/healthz', (req, res) => res.json({ ok: true, mqtt: mqttUp }));   // used by the Docker healthcheck, no login
 
-// Optional login: everyone who can open the dashboard can also run the pumps,
-// so protect it with a password when it is reachable from the internet.
-const same = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && crypto.timingSafeEqual(x, y); };
-if (DASH_PASS) {
-  app.use((req, res, next) => {
-    const [type, value] = (req.headers.authorization || '').split(' ');
-    if (type === 'Basic' && value) {
-      const text = Buffer.from(value, 'base64').toString();
-      const i = text.indexOf(':');
-      if (i > 0 && same(text.slice(0, i), DASH_USER) && same(text.slice(i + 1), DASH_PASS)) return next();
-    }
-    res.set('WWW-Authenticate', 'Basic realm="AquaGuard"').status(401).send('Login required');
-  });
-} else {
-  console.warn('DASHBOARD_PASSWORD not set: dashboard has no login (fine on localhost only)');
+// ---------------- Login ----------------
+// Everyone who can open the dashboard can also run the pumps, so it is protected when
+// DASHBOARD_PASSWORD is set. Browsers sign in on /login and get a signed session cookie.
+// Scripts (predict_live.py) may send HTTP Basic credentials instead.
+const SESSION_COOKIE = 'aquaguard_session';
+const SESSION_DAYS = 7;
+// Key derived from the password: changing the password signs everyone out
+const SESSION_KEY = crypto.createHash('sha256').update('aquaguard-session:' + DASH_USER + ':' + DASH_PASS).digest();
+const same = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
+const sign = (data) => crypto.createHmac('sha256', SESSION_KEY).update(data).digest('base64url');
+
+function makeSession() {
+  const data = Buffer.from(JSON.stringify({ u: DASH_USER, exp: Date.now() + SESSION_DAYS * 864e5 })).toString('base64url');
+  return `${data}.${sign(data)}`;
 }
+function validSession(token) {
+  const [data, sig] = String(token || '').split('.');
+  if (!data || !sig || !same(sig, sign(data))) return false;
+  try { return JSON.parse(Buffer.from(data, 'base64url').toString()).exp > Date.now(); } catch { return false; }
+}
+function cookie(req, name) {
+  for (const part of (req.headers.cookie || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return null;
+}
+function basicOk(req) {
+  const [type, value] = (req.headers.authorization || '').split(' ');
+  if (type !== 'Basic' || !value) return false;
+  const text = Buffer.from(value, 'base64').toString();
+  const i = text.indexOf(':');
+  return i > 0 && same(text.slice(0, i), DASH_USER) && same(text.slice(i + 1), DASH_PASS);
+}
+const signedIn = (req) => !DASH_PASS || validSession(cookie(req, SESSION_COOKIE)) || basicOk(req);
+
+// Slow down password guessing: 10 failed attempts per IP per 15 minutes
+const failures = new Map();
+function tooManyFailures(ip) {
+  const f = failures.get(ip);
+  if (!f || Date.now() - f.since > 15 * 60e3) { failures.delete(ip); return false; }
+  return f.count >= 10;
+}
+function recordFailure(ip) {
+  const f = failures.get(ip);
+  if (!f || Date.now() - f.since > 15 * 60e3) failures.set(ip, { count: 1, since: Date.now() });
+  else f.count++;
+}
+
+app.set('trust proxy', 1);   // behind Nginx: req.secure and req.ip come from X-Forwarded-* headers
+
+app.post('/api/login', (req, res) => {
+  if (!DASH_PASS) return res.json({ ok: true });
+  const ip = req.ip;
+  if (tooManyFailures(ip)) return res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' });
+  const { username, password } = req.body || {};
+  if (!same(username || '', DASH_USER) || !same(password || '', DASH_PASS)) {
+    recordFailure(ip);
+    return res.status(401).json({ error: 'Wrong username or password.' });
+  }
+  failures.delete(ip);
+  res.cookie(SESSION_COOKIE, makeSession(), { httpOnly: true, sameSite: 'lax', secure: req.secure, maxAge: SESSION_DAYS * 864e5, path: '/' });
+  res.json({ ok: true });
+});
+app.post('/api/logout', (req, res) => {
+  res.clearCookie(SESSION_COOKIE, { path: '/' });
+  res.json({ ok: true });
+});
+app.get('/api/session', (req, res) => res.json({ auth: !!DASH_PASS, signedIn: signedIn(req) }));
+
+const PUBLIC_PATHS = new Set(['/login', '/login.html', '/styles.css', '/favicon.svg']);
+app.get('/login', (req, res) => (DASH_PASS && !signedIn(req)
+  ? res.sendFile(path.join(__dirname, 'public', 'login.html'))
+  : res.redirect('/')));
+app.use((req, res, next) => {
+  if (PUBLIC_PATHS.has(req.path) || signedIn(req)) return next();
+  if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Not signed in' });
+  res.redirect('/login?next=' + encodeURIComponent(req.originalUrl));
+});
+if (!DASH_PASS) console.warn('DASHBOARD_PASSWORD not set: dashboard has no login (fine on localhost only)');
+
 app.use(express.static(path.join(__dirname, 'public')));
 // Chart.js served locally, so the dashboard also works without internet
 app.get('/vendor/chart.umd.js', (req, res) => res.sendFile(path.join(__dirname, 'node_modules', 'chart.js', 'dist', 'chart.umd.js')));

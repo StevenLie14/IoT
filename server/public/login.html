@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · AquaGuard</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="login-page">
+  <div class="login">
+    <div class="brand">AquaGuard <small>Tank 01</small></div>
+    <div class="panel">
+      <form id="form" novalidate>
+        <div class="error" id="error" role="alert"></div>
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" autocomplete="username" required autofocus>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn primary" id="submit" type="submit">Sign in</button>
+      </form>
+    </div>
+    <footer>Water-quality monitoring and automatic water change</footer>
+  </div>
+</main>
+<script>
+  const form = document.getElementById('form');
+  const err = document.getElementById('error');
+  const btn = document.getElementById('submit');
+  const next = new URLSearchParams(location.search).get('next');
+  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+  function showError(text) { err.textContent = text; err.classList.add('show'); }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.classList.remove('show');
+    const username = form.username.value.trim(), password = form.password.value;
+    if (!username || !password) return showError('Enter your username and password.');
+    btn.disabled = true; btn.textContent = 'Signing in';
+    try {
+      const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+      if (res.ok) { location.href = safeNext; return; }
+      const body = await res.json().catch(() => ({}));
+      showError(body.error || 'Sign in failed.');
+      form.password.value = ''; form.password.focus();
+    } catch {
+      showError('Cannot reach the server. Check your connection.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Sign in';
+    }
+  });
+</script>
+</body>
+</html>
