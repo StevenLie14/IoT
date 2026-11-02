@@ -1,4 +1,3 @@
-# AquaGuard: Next.js dashboard + API (standalone build)
 FROM node:26-alpine AS deps
 WORKDIR /app
 COPY server/package.json server/package-lock.json ./

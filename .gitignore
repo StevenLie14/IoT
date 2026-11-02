@@ -9,6 +9,5 @@ __pycache__/
 .next/
 next-env.d.ts
 *.tsbuildinfo
-# API routes whose folder names end in .csv
 !server/app/api/export.csv/
 !server/app/api/events.csv/
