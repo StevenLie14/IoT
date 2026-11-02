@@ -1,0 +1,64 @@
+name: Build and Deploy Application
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: shin
+    steps:
+      - name: Git Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Docker Build And Push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          network: host
+          tags: ${{ secrets.REGISTRY_URL }}/stevenlie14/aquaguard:latest
+
+  deploy:
+    runs-on: shin
+    needs: build
+    steps:
+      - name: Git Checkout Repository
+        uses: actions/checkout@v4
+
+      # Vault path must hold DASHBOARD_PASSWORD (and optionally MQTT_URL, TOPIC_BASE, DASHBOARD_USER)
+      - name: Import Deploy Secrets from Hashicorp
+        id: vault_secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          method: 'userpass'
+          url: ${{ secrets.VAULT_URL }}
+          username: ${{ secrets.VAULT_USERNAME }}
+          password: ${{ secrets.VAULT_PASSWORD }}
+          tlsSkipVerify: true
+          secrets: |
+            ${{ secrets.VAULT_PATH }} *
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Deploy image
+        env:
+          REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
+        run: |
+          docker compose -f docker-compose.yml pull
+          docker compose -f docker-compose.yml up -d --remove-orphans
+          docker image prune -f
