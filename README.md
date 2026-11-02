@@ -154,6 +154,8 @@ Data database tersimpan di volume Docker `aquaguard_pg`.
 
 Setelah itu setiap push ke `main` otomatis build dan deploy. Buka `https://aquaguard.stevenlie.my.id`
 dan login dengan `DASHBOARD_USER` (bawaan `admin`) dan `DASHBOARD_PASSWORD`.
+Halaman login muncul otomatis. Sesi berlaku 7 hari, dan mengganti `DASHBOARD_PASSWORD` membuat semua sesi keluar.
+Setelah 10 kali password salah dari satu alamat IP, login dikunci 15 menit.
 
 Prediksi live dari laptop ke server online:
 `python predict_live.py --server https://aquaguard.stevenlie.my.id --user admin --password <password>`
