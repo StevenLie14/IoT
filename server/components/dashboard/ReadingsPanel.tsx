@@ -23,7 +23,6 @@ function predictionText(prediction: Prediction) {
 }
 
 export default function ReadingsPanel({ reading, recent, prediction }: Props) {
-  const hasReservoir = reading?.t_res !== null && reading?.t_res !== undefined;
   const temperatureLevel = levelFor(reading?.t_tank, RANGES.temperature);
   const tdsLevel = levelFor(reading?.tds, RANGES.tds);
   const turbidityLevel = levelFor(reading?.turb, RANGES.turbidity);
@@ -36,7 +35,7 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
           <span className="num">{formatNumber(reading?.t_tank)}</span>
           <span className="unit">°C</span>
         </div>
-        <span className="sub">{hasReservoir ? `reservoir ${formatNumber(reading!.t_res)} °C` : 'reservoir not fitted'}</span>
+        <span className="sub">tank water</span>
         <RangeBar value={reading?.t_tank} range={RANGES.temperature} level={temperatureLevel} unit=" °C" />
         <Sparkline values={recent.map((row) => row.t_tank)} />
       </div>

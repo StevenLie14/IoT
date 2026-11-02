@@ -11,7 +11,7 @@ import { useLiveData } from '@/hooks/useLiveData';
 import { useTheme } from '@/hooks/useTheme';
 import type { LogEvent } from '@/lib/client/types';
 
-const CHANGE_STATES = ['postponed', 'draining', 'settling', 'filling'];
+const CHANGE_STATES = ['draining', 'settling', 'filling'];
 
 function findLastChange(events: LogEvent[]) {
   return events.find((event) => event.type === 'state' && String(event.detail ?? '').startsWith('change done')) ?? null;

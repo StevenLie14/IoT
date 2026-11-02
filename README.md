@@ -25,7 +25,7 @@ iot/
 | Persyaratan | Di kode |
 |---|---|
 | ESP32, minimal 3 sensor | DS18B20 (suhu), TDS, turbidity (+ volume buang perkiraan) |
-| Minimal 2 aktuator, rule-based | Pompa buang dan pompa isi (relay), buzzer, dan OLED. Aturan R1 (skor < 60 tiga kali → ganti air 10/20/30%), R2 (selisih suhu), R3 (volume), R7 (timeout 3 menit), R10 (cooldown) |
+| Minimal 2 aktuator, rule-based | Pompa buang dan pompa isi (relay), buzzer, dan OLED. Aturan R1 (skor < 60 tiga kali → ganti air 10/20/30%), R3 (volume), R7 (timeout 3 menit), R10 (cooldown) |
 | MQTT | `TOPIC_BASE/data` tiap 5 detik, `/event`, `/cmd`, `/status` |
 | Penyimpanan terus-menerus | PostgreSQL: tabel `readings` dan `events` |
 | Dashboard | Nilai live, status aktuator, grafik riwayat, tombol kontrol, log event. Ada juga dashboard Node-RED di `nodered/` |

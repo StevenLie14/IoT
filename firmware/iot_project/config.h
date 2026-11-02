@@ -50,8 +50,6 @@
 // ---------- Automation ----------
 #define SCORE_THRESHOLD        60
 #define LOW_READINGS_TO_ACT     3
-#define TEMP_DIFF_MAX_C       2.0f
-#define POSTPONE_MS        300000UL   // 5 min (30 s in demo mode)
 #define COOLDOWN_MS       1800000UL   // 30 min (60 s in demo mode)
 #define PUMP_TIMEOUT_MS    180000UL   // 3 min safety limit per pump run
 #define SETTLE_MS            3000UL   // pause between drain and fill

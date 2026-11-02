@@ -4,7 +4,6 @@ export type Reading = {
   source: string;
   label: string | null;
   t_tank: number | null;
-  t_res: number | null;
   tds: number | null;
   tds_v: number | null;
   turb: number | null;

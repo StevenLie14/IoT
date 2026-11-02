@@ -29,7 +29,7 @@ bool oledOk = false, adsOk = false;
 int tempCount = 0;
 
 // ---------------- Latest readings ----------------
-float tTank = NAN, tRes = NAN;
+float tTank = NAN;
 float tdsV = 0, tdsPpm = 0;
 float turbV = 0, turbIdx = 0;
 float phV = 0, phVal = NAN;
@@ -37,14 +37,14 @@ int   score = 100;
 int   mlClass = -1;      // on-device water-condition prediction (-1 = no model)
 
 // ---------------- State machine ----------------
-enum State { IDLE, POSTPONED, DRAINING, SETTLING, FILLING, FAULT };
-const char* STATE_NAMES[] = {"idle", "postponed", "draining", "settling", "filling", "fault"};
+enum State { IDLE, DRAINING, SETTLING, FILLING, FAULT };
+const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling", "fault"};
 State state = IDLE;
 bool autoMode = true, demoMode = false;
 int lowCount = 0;
 int changePct = 0;
 float targetMl = 0, drainedMl = 0, filledMl = 0;
-uint32_t stateSince = 0, postponeUntil = 0, cooldownUntil = 0;
+uint32_t stateSince = 0, cooldownUntil = 0;
 String faultMsg = "";
 
 // Manual test run (commands "drain N" / "fill N")
@@ -63,7 +63,6 @@ uint32_t cycleStart = 0; int phase = 0;
 
 // ---------------- Helpers ----------------
 String topic(const char* sub) { return String(TOPIC_BASE) + "/" + sub; }
-uint32_t postponeMs() { return demoMode ? 30000UL : POSTPONE_MS; }
 uint32_t cooldownMs() { return demoMode ? 60000UL : COOLDOWN_MS; }
 uint32_t epochNow() { time_t t = time(nullptr); return t > 1600000000 ? (uint32_t)t : 0; }
 
@@ -161,18 +160,11 @@ int computeScore() {
 // ---------------- Water change ----------------
 void startChange(int pct, const char* reason) {
   if (state == FAULT) { Serial.println("In fault: send reset first"); return; }
-  if (state != IDLE && state != POSTPONED) { Serial.println("Change already running"); return; }
+  if (state != IDLE) { Serial.println("Change already running"); return; }
   if (pct < 5) pct = 5; if (pct > 50) pct = 50;
   changePct = pct;
   targetMl = TANK_WATER_ML * pct / 100.0f;
   drainedMl = filledMl = 0;
-  // R2: temperature difference between tank and reservoir
-  if (tempCount >= 2 && !isnan(tTank) && !isnan(tRes) && fabsf(tTank - tRes) > TEMP_DIFF_MAX_C) {
-    postponeUntil = millis() + postponeMs();
-    enterState(POSTPONED, String("temp diff ") + String(fabsf(tTank - tRes), 1) + " C");
-    beep(2);
-    return;
-  }
   // R5 pre-check: water already below low float
   if (floatBot()) { fault("water already below low float"); return; }
   enterState(DRAINING, reason);
@@ -202,9 +194,6 @@ void runStateMachine() {
   }
 
   switch (state) {
-    case POSTPONED:
-      if ((int32_t)(now - postponeUntil) >= 0) { state = IDLE; startChange(changePct, "retry after postpone"); }
-      break;
     case DRAINING:
       drainedMl = (now - stateSince) / 1000.0f * DRAIN_ML_PER_SEC;
       if (drainedMl >= targetMl) {                                                               // R3
@@ -312,7 +301,6 @@ void publishData() {
   doc["ts"] = epochNow();
   doc["src"] = "device";
   if (isnan(tTank)) doc["t_tank"] = nullptr; else doc["t_tank"] = roundf(tTank * 100) / 100;
-  if (isnan(tRes)) doc["t_res"] = nullptr; else doc["t_res"] = roundf(tRes * 100) / 100;
   doc["tds"] = roundf(tdsPpm * 10) / 10;
   doc["tds_v"] = roundf(tdsV * 1000) / 1000;
   doc["turb"] = roundf(turbIdx * 10) / 10;
@@ -388,7 +376,6 @@ void sensorCycle() {
     phase = 1;
   } else if (phase == 1 && t >= 1000) {
     if (tempCount >= 1) { float v = temps.getTempCByIndex(0); tTank = (v > -55 && v < 125 && v != 85.0f) ? v : NAN; }
-    if (tempCount >= 2) { float v = temps.getTempCByIndex(1); tRes  = (v > -55 && v < 125 && v != 85.0f) ? v : NAN; }
     if (adsOk) {
       tdsV = readVoltsMedian(ADS_CH_TDS);
       float tc = isnan(tTank) ? 25.0f : tTank;

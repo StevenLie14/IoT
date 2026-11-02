@@ -23,7 +23,7 @@ type Pending = {
 type Message = { text: string; kind: 'ok' | 'error' | '' };
 
 const RESPONSE_TIMEOUT_MS = 10000;
-const WORKING_STATES = ['postponed', 'draining', 'settling', 'filling'];
+const WORKING_STATES = ['draining', 'settling', 'filling'];
 
 function changeRequest(percent: number): Pending {
   return {

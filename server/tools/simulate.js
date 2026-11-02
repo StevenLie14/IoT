@@ -70,7 +70,7 @@ setInterval(() => {
     event('rule', 'R1', s, `score low 3x -> ${p}%`);
     startChange(p, 'auto R1');
   }
-  pub('data', { ts: ts(), src: 'sim', t_tank: +temp.toFixed(2), t_res: null, tds: +tds.toFixed(1), tds_v: +(tds / 400).toFixed(3),
+  pub('data', { ts: ts(), src: 'sim', t_tank: +temp.toFixed(2), tds: +tds.toFixed(1), tds_v: +(tds / 400).toFixed(3),
     turb: +turbIdx.toFixed(1), turb_v: +turbV.toFixed(3), ph: null, ph_v: null, flow: drain ? +(ML_PER_SEC * 0.06).toFixed(2) : 0,
     vol_ml: Math.round(drained), f_top: 0, f_bot: 0, score: s, state, drain, fill, feeder: 0, buzzer: 0, auto, demo, fault: '' });
 }, INTERVAL);

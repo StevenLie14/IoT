@@ -18,7 +18,7 @@ export function q<T extends Record<string, any> = Record<string, any>>(sql: stri
 }
 
 export const COLS = [
-  't_tank', 't_res', 'tds', 'tds_v', 'turb', 'turb_v', 'ph', 'ph_v', 'flow', 'vol_ml', 'f_top', 'f_bot',
+  't_tank', 'tds', 'tds_v', 'turb', 'turb_v', 'ph', 'ph_v', 'flow', 'vol_ml', 'f_top', 'f_bot',
   'score', 'state', 'drain', 'fill', 'feeder', 'buzzer', 'auto', 'demo', 'fault', 'ml',
 ] as const;
 
@@ -29,7 +29,7 @@ const SCHEMA = `
     id BIGSERIAL PRIMARY KEY,
     epoch BIGINT NOT NULL,
     device_ts BIGINT,
-    t_tank DOUBLE PRECISION, t_res DOUBLE PRECISION, tds DOUBLE PRECISION, tds_v DOUBLE PRECISION,
+    t_tank DOUBLE PRECISION, tds DOUBLE PRECISION, tds_v DOUBLE PRECISION,
     turb DOUBLE PRECISION, turb_v DOUBLE PRECISION, ph DOUBLE PRECISION, ph_v DOUBLE PRECISION,
     flow DOUBLE PRECISION, vol_ml DOUBLE PRECISION, f_top SMALLINT, f_bot SMALLINT,
     score SMALLINT, state TEXT, drain SMALLINT, fill SMALLINT, feeder SMALLINT,

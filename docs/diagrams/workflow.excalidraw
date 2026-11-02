@@ -2,74 +2,965 @@
   "type": "excalidraw",
   "version": 2,
   "source": "https://excalidraw.com",
-  "appState": { "viewBackgroundColor": "#ffffff", "gridSize": 20 },
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": 20
+  },
   "files": {},
   "elements": [
-    {"type":"text","id":"title","x":0,"y":0,"width":600,"height":35,"text":"IoT Project · firmware workflow","fontSize":28,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#1e40af","roughness":0},
-    {"type":"text","id":"subtitle","x":0,"y":44,"width":900,"height":23,"text":"what the ESP32 does every 5 seconds, and how a water change runs","fontSize":18,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#64748b","roughness":0},
-
-    {"type":"text","id":"h_a","x":0,"y":104,"width":400,"height":25,"text":"A  sensor cycle","fontSize":20,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#1e40af","roughness":0},
-    {"type":"line","id":"tl","x":0,"y":222,"width":1080,"height":0,"strokeColor":"#1e3a5f","strokeWidth":2,"roughness":0,"points":[[0,0],[1080,0]]},
-    {"type":"ellipse","id":"d0","x":-7,"y":215,"width":14,"height":14,"strokeColor":"#3b82f6","backgroundColor":"#3b82f6","fillStyle":"solid","roughness":0},
-    {"type":"ellipse","id":"d1","x":313,"y":215,"width":14,"height":14,"strokeColor":"#3b82f6","backgroundColor":"#3b82f6","fillStyle":"solid","roughness":0},
-    {"type":"ellipse","id":"d4","x":693,"y":215,"width":14,"height":14,"strokeColor":"#3b82f6","backgroundColor":"#3b82f6","fillStyle":"solid","roughness":0},
-    {"type":"ellipse","id":"d5","x":1073,"y":215,"width":14,"height":14,"strokeColor":"#3b82f6","backgroundColor":"#3b82f6","fillStyle":"solid","roughness":0},
-    {"type":"text","id":"l0","x":-8,"y":186,"width":40,"height":23,"text":"0 s","fontSize":18,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#3b82f6","roughness":0},
-    {"type":"text","id":"l1","x":306,"y":186,"width":40,"height":23,"text":"1 s","fontSize":18,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#3b82f6","roughness":0},
-    {"type":"text","id":"l4","x":686,"y":186,"width":40,"height":23,"text":"4 s","fontSize":18,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#3b82f6","roughness":0},
-    {"type":"text","id":"l5","x":1066,"y":186,"width":40,"height":23,"text":"5 s","fontSize":18,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#3b82f6","roughness":0},
-    {"type":"text","id":"t0","x":0,"y":240,"width":280,"height":36,"text":"TDS power on (GPIO 13)\nstart temperature reading","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#374151","roughness":0},
-    {"type":"text","id":"t1","x":320,"y":240,"width":300,"height":36,"text":"read temperature + TDS\nTDS power off","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#374151","roughness":0},
-    {"type":"text","id":"t4","x":700,"y":240,"width":300,"height":36,"text":"read turbidity\nscore 0–100 · run rules","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#374151","roughness":0},
-    {"type":"text","id":"t5","x":1080,"y":240,"width":300,"height":36,"text":"publish /data\nupdate the OLED","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#374151","roughness":0},
-    {"type":"arrow","id":"loop","x":1080,"y":180,"width":1080,"height":12,"strokeColor":"#3b82f6","strokeWidth":2,"strokeStyle":"dashed","roughness":0,"points":[[0,0],[0,-16],[-1080,-16],[-1080,-2]],"endArrowhead":"arrow"},
-    {"type":"text","id":"loop_l","x":470,"y":140,"width":200,"height":18,"text":"repeat forever","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#3b82f6","roughness":0},
-
-    {"type":"text","id":"h_b","x":0,"y":320,"width":600,"height":25,"text":"B  automatic water change (rule R1)","fontSize":20,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#1e40af","roughness":0},
-
-    {"type":"ellipse","id":"start","x":0,"y":370,"width":210,"height":100,"strokeColor":"#c2410c","backgroundColor":"#fed7aa","fillStyle":"solid","strokeWidth":2,"roughness":0,"boundElements":[{"id":"start_t","type":"text"},{"id":"a1","type":"arrow"}]},
-    {"type":"text","id":"start_t","x":52,"y":400,"width":106,"height":40,"text":"score < 60\nthree times","fontSize":16,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#374151","roughness":0,"containerId":"start"},
-    {"type":"text","id":"pct","x":0,"y":490,"width":220,"height":54,"text":"score < 40 → 30 %\nscore < 50 → 20 %\notherwise  → 10 %","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#64748b","roughness":0},
-
-    {"type":"diamond","id":"q1","x":260,"y":360,"width":210,"height":120,"strokeColor":"#b45309","backgroundColor":"#fef3c7","fillStyle":"solid","strokeWidth":2,"roughness":0,"boundElements":[{"id":"q1_t","type":"text"},{"id":"a1","type":"arrow"},{"id":"a2","type":"arrow"},{"id":"a_no","type":"arrow"}]},
-    {"type":"text","id":"q1_t","x":314,"y":402,"width":102,"height":36,"text":"auto on and\nno cooldown?","fontSize":14,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#374151","roughness":0,"containerId":"q1"},
-    {"type":"diamond","id":"q2","x":520,"y":360,"width":220,"height":120,"strokeColor":"#b45309","backgroundColor":"#fef3c7","fillStyle":"solid","strokeWidth":2,"roughness":0,"boundElements":[{"id":"q2_t","type":"text"},{"id":"a2","type":"arrow"},{"id":"a3","type":"arrow"},{"id":"a_wait","type":"arrow"}]},
-    {"type":"text","id":"q2_t","x":563,"y":402,"width":134,"height":36,"text":"tank − reservoir\n> 2 °C ?","fontSize":14,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#374151","roughness":0,"containerId":"q2"},
-
-    {"type":"rectangle","id":"drain","x":790,"y":375,"width":250,"height":90,"strokeColor":"#1e3a5f","backgroundColor":"#3b82f6","fillStyle":"solid","strokeWidth":2,"roughness":0,"roundness":{"type":3},"boundElements":[{"id":"drain_t","type":"text"},{"id":"a3","type":"arrow"},{"id":"a4","type":"arrow"},{"id":"w1_a","type":"arrow"}]},
-    {"type":"text","id":"drain_t","x":852,"y":400,"width":126,"height":40,"text":"drain until\ntarget volume","fontSize":16,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#ffffff","roughness":0,"containerId":"drain"},
-    {"type":"rectangle","id":"refill","x":1080,"y":375,"width":230,"height":90,"strokeColor":"#1e3a5f","backgroundColor":"#3b82f6","fillStyle":"solid","strokeWidth":2,"roughness":0,"roundness":{"type":3},"boundElements":[{"id":"refill_t","type":"text"},{"id":"a4","type":"arrow"},{"id":"a5","type":"arrow"},{"id":"w2_a","type":"arrow"}]},
-    {"type":"text","id":"refill_t","x":1108,"y":400,"width":174,"height":40,"text":"wait 3 s, then\nrefill same volume","fontSize":16,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#ffffff","roughness":0,"containerId":"refill"},
-    {"type":"ellipse","id":"done","x":1350,"y":370,"width":210,"height":100,"strokeColor":"#047857","backgroundColor":"#a7f3d0","fillStyle":"solid","strokeWidth":2,"roughness":0,"boundElements":[{"id":"done_t","type":"text"},{"id":"a5","type":"arrow"}]},
-    {"type":"text","id":"done_t","x":1383,"y":400,"width":144,"height":40,"text":"idle\n30 min cooldown","fontSize":16,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#374151","roughness":0,"containerId":"done"},
-
-    {"type":"arrow","id":"a1","x":212,"y":420,"width":46,"height":0,"strokeColor":"#c2410c","strokeWidth":2,"roughness":0,"points":[[0,0],[46,0]],"startBinding":{"elementId":"start","focus":0,"gap":2},"endBinding":{"elementId":"q1","focus":0,"gap":2},"endArrowhead":"arrow"},
-    {"type":"arrow","id":"a2","x":472,"y":420,"width":46,"height":0,"strokeColor":"#b45309","strokeWidth":2,"roughness":0,"points":[[0,0],[46,0]],"startBinding":{"elementId":"q1","focus":0,"gap":2},"endBinding":{"elementId":"q2","focus":0,"gap":2},"endArrowhead":"arrow"},
-    {"type":"text","id":"a2_l","x":478,"y":396,"width":40,"height":18,"text":"yes","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#b45309","roughness":0},
-    {"type":"arrow","id":"a3","x":742,"y":420,"width":46,"height":0,"strokeColor":"#b45309","strokeWidth":2,"roughness":0,"points":[[0,0],[46,0]],"startBinding":{"elementId":"q2","focus":0,"gap":2},"endBinding":{"elementId":"drain","focus":0,"gap":2},"endArrowhead":"arrow"},
-    {"type":"text","id":"a3_l","x":752,"y":396,"width":30,"height":18,"text":"no","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#b45309","roughness":0},
-    {"type":"arrow","id":"a4","x":1042,"y":420,"width":36,"height":0,"strokeColor":"#1e3a5f","strokeWidth":2,"roughness":0,"points":[[0,0],[36,0]],"startBinding":{"elementId":"drain","focus":0,"gap":2},"endBinding":{"elementId":"refill","focus":0,"gap":2},"endArrowhead":"arrow"},
-    {"type":"arrow","id":"a5","x":1312,"y":420,"width":36,"height":0,"strokeColor":"#047857","strokeWidth":2,"roughness":0,"points":[[0,0],[36,0]],"startBinding":{"elementId":"refill","focus":0,"gap":2},"endBinding":{"elementId":"done","focus":0,"gap":2},"endArrowhead":"arrow"},
-
-    {"type":"arrow","id":"a_no","x":365,"y":482,"width":0,"height":44,"strokeColor":"#b45309","strokeWidth":2,"roughness":0,"points":[[0,0],[0,44]],"startBinding":{"elementId":"q1","focus":0,"gap":2},"endArrowhead":"arrow"},
-    {"type":"text","id":"no_l","x":300,"y":532,"width":200,"height":36,"text":"no → keep\nmonitoring","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#64748b","roughness":0},
-
-    {"type":"arrow","id":"a_wait","x":630,"y":482,"width":0,"height":44,"strokeColor":"#dc2626","strokeWidth":2,"roughness":0,"points":[[0,0],[0,44]],"startBinding":{"elementId":"q2","focus":0,"gap":2},"endBinding":{"elementId":"wait","focus":0,"gap":2},"endArrowhead":"arrow"},
-    {"type":"text","id":"wait_l","x":640,"y":488,"width":40,"height":18,"text":"yes","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#dc2626","roughness":0},
-    {"type":"rectangle","id":"wait","x":530,"y":528,"width":200,"height":60,"strokeColor":"#dc2626","backgroundColor":"#fee2e2","fillStyle":"solid","strokeWidth":2,"roughness":0,"roundness":{"type":3},"boundElements":[{"id":"wait_t","type":"text"},{"id":"a_wait","type":"arrow"}]},
-    {"type":"text","id":"wait_t","x":553,"y":540,"width":154,"height":36,"text":"wait 5 min,\nthen check again","fontSize":14,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#374151","roughness":0,"containerId":"wait"},
-
-    {"type":"text","id":"vol","x":790,"y":480,"width":220,"height":54,"text":"7000 ml × 20 %\n= 1400 ml drained\n≈ 89 s at 15.8 ml/s","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#64748b","roughness":0},
-
-    {"type":"text","id":"h_c","x":0,"y":640,"width":700,"height":25,"text":"C  safety checks on every loop pass","fontSize":20,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#1e40af","roughness":0},
-    {"type":"text","id":"c_note","x":0,"y":676,"width":460,"height":36,"text":"they can stop the pumps at any point\nof the water change above","fontSize":14,"fontFamily":3,"textAlign":"left","verticalAlign":"top","strokeColor":"#64748b","roughness":0},
-    {"type":"rectangle","id":"w3","x":520,"y":700,"width":220,"height":60,"strokeColor":"#1e40af","backgroundColor":"#dbeafe","fillStyle":"solid","strokeWidth":2,"strokeStyle":"dashed","roughness":0,"roundness":{"type":3},"boundElements":[{"id":"w3_t","type":"text"}]},
-    {"type":"text","id":"w3_t","x":554,"y":712,"width":152,"height":36,"text":"float switches\n(optional, off)","fontSize":14,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#374151","roughness":0,"containerId":"w3"},
-    {"type":"rectangle","id":"w1","x":790,"y":700,"width":250,"height":60,"strokeColor":"#dc2626","backgroundColor":"#fee2e2","fillStyle":"solid","strokeWidth":2,"roughness":0,"roundness":{"type":3},"boundElements":[{"id":"w1_t","type":"text"},{"id":"w1_a","type":"arrow"}]},
-    {"type":"text","id":"w1_t","x":831,"y":712,"width":168,"height":36,"text":"pump on > 3 min\n→ fault, pumps lock","fontSize":14,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#374151","roughness":0,"containerId":"w1"},
-    {"type":"rectangle","id":"w2","x":1080,"y":700,"width":230,"height":60,"strokeColor":"#dc2626","backgroundColor":"#fee2e2","fillStyle":"solid","strokeWidth":2,"roughness":0,"roundness":{"type":3},"boundElements":[{"id":"w2_t","type":"text"},{"id":"w2_a","type":"arrow"}]},
-    {"type":"text","id":"w2_t","x":1119,"y":712,"width":152,"height":36,"text":"stop or reset\nfrom dashboard","fontSize":14,"fontFamily":3,"textAlign":"center","verticalAlign":"middle","strokeColor":"#374151","roughness":0,"containerId":"w2"},
-    {"type":"arrow","id":"w1_a","x":1020,"y":698,"width":0,"height":231,"strokeColor":"#dc2626","strokeWidth":2,"strokeStyle":"dashed","roughness":0,"points":[[0,0],[0,-231]],"startBinding":{"elementId":"w1","focus":0.8,"gap":2},"endBinding":{"elementId":"drain","focus":-0.8,"gap":2},"endArrowhead":"arrow"},
-    {"type":"arrow","id":"w2_a","x":1195,"y":698,"width":0,"height":231,"strokeColor":"#dc2626","strokeWidth":2,"strokeStyle":"dashed","roughness":0,"points":[[0,0],[0,-231]],"startBinding":{"elementId":"w2","focus":0,"gap":2},"endBinding":{"elementId":"refill","focus":0,"gap":2},"endArrowhead":"arrow"}
+    {
+      "type": "text",
+      "id": "title",
+      "x": 0,
+      "y": 0,
+      "width": 600,
+      "height": 35,
+      "text": "IoT Project \u00b7 firmware workflow",
+      "fontSize": 28,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#1e40af",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "x": 0,
+      "y": 44,
+      "width": 900,
+      "height": 23,
+      "text": "what the ESP32 does every 5 seconds, and how a water change runs",
+      "fontSize": 18,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#64748b",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "h_a",
+      "x": 0,
+      "y": 104,
+      "width": 400,
+      "height": 25,
+      "text": "A  sensor cycle",
+      "fontSize": 20,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#1e40af",
+      "roughness": 0
+    },
+    {
+      "type": "line",
+      "id": "tl",
+      "x": 0,
+      "y": 222,
+      "width": 1080,
+      "height": 0,
+      "strokeColor": "#1e3a5f",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          1080,
+          0
+        ]
+      ]
+    },
+    {
+      "type": "ellipse",
+      "id": "d0",
+      "x": -7,
+      "y": 215,
+      "width": 14,
+      "height": 14,
+      "strokeColor": "#3b82f6",
+      "backgroundColor": "#3b82f6",
+      "fillStyle": "solid",
+      "roughness": 0
+    },
+    {
+      "type": "ellipse",
+      "id": "d1",
+      "x": 313,
+      "y": 215,
+      "width": 14,
+      "height": 14,
+      "strokeColor": "#3b82f6",
+      "backgroundColor": "#3b82f6",
+      "fillStyle": "solid",
+      "roughness": 0
+    },
+    {
+      "type": "ellipse",
+      "id": "d4",
+      "x": 693,
+      "y": 215,
+      "width": 14,
+      "height": 14,
+      "strokeColor": "#3b82f6",
+      "backgroundColor": "#3b82f6",
+      "fillStyle": "solid",
+      "roughness": 0
+    },
+    {
+      "type": "ellipse",
+      "id": "d5",
+      "x": 1073,
+      "y": 215,
+      "width": 14,
+      "height": 14,
+      "strokeColor": "#3b82f6",
+      "backgroundColor": "#3b82f6",
+      "fillStyle": "solid",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "l0",
+      "x": -8,
+      "y": 186,
+      "width": 40,
+      "height": 23,
+      "text": "0 s",
+      "fontSize": 18,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#3b82f6",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "l1",
+      "x": 306,
+      "y": 186,
+      "width": 40,
+      "height": 23,
+      "text": "1 s",
+      "fontSize": 18,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#3b82f6",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "l4",
+      "x": 686,
+      "y": 186,
+      "width": 40,
+      "height": 23,
+      "text": "4 s",
+      "fontSize": 18,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#3b82f6",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "l5",
+      "x": 1066,
+      "y": 186,
+      "width": 40,
+      "height": 23,
+      "text": "5 s",
+      "fontSize": 18,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#3b82f6",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "t0",
+      "x": 0,
+      "y": 240,
+      "width": 280,
+      "height": 36,
+      "text": "TDS power on (GPIO 13)\nstart temperature reading",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#374151",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "t1",
+      "x": 320,
+      "y": 240,
+      "width": 300,
+      "height": 36,
+      "text": "read temperature + TDS\nTDS power off",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#374151",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "t4",
+      "x": 700,
+      "y": 240,
+      "width": 300,
+      "height": 36,
+      "text": "read turbidity\nscore 0\u2013100 \u00b7 run rules",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#374151",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "t5",
+      "x": 1080,
+      "y": 240,
+      "width": 300,
+      "height": 36,
+      "text": "publish /data\nupdate the OLED",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#374151",
+      "roughness": 0
+    },
+    {
+      "type": "arrow",
+      "id": "loop",
+      "x": 1080,
+      "y": 180,
+      "width": 1080,
+      "height": 12,
+      "strokeColor": "#3b82f6",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          -16
+        ],
+        [
+          -1080,
+          -16
+        ],
+        [
+          -1080,
+          -2
+        ]
+      ],
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "text",
+      "id": "loop_l",
+      "x": 470,
+      "y": 140,
+      "width": 200,
+      "height": 18,
+      "text": "repeat forever",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#3b82f6",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "h_b",
+      "x": 0,
+      "y": 320,
+      "width": 600,
+      "height": 25,
+      "text": "B  automatic water change (rule R1)",
+      "fontSize": 20,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#1e40af",
+      "roughness": 0
+    },
+    {
+      "type": "ellipse",
+      "id": "start",
+      "x": 0,
+      "y": 370,
+      "width": 210,
+      "height": 100,
+      "strokeColor": "#c2410c",
+      "backgroundColor": "#fed7aa",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "boundElements": [
+        {
+          "id": "start_t",
+          "type": "text"
+        },
+        {
+          "id": "a1",
+          "type": "arrow"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "start_t",
+      "x": 52,
+      "y": 400,
+      "width": 106,
+      "height": 40,
+      "text": "score < 60\nthree times",
+      "fontSize": 16,
+      "fontFamily": 3,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "strokeColor": "#374151",
+      "roughness": 0,
+      "containerId": "start"
+    },
+    {
+      "type": "text",
+      "id": "pct",
+      "x": 0,
+      "y": 490,
+      "width": 220,
+      "height": 54,
+      "text": "score < 40 \u2192 30 %\nscore < 50 \u2192 20 %\notherwise  \u2192 10 %",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#64748b",
+      "roughness": 0
+    },
+    {
+      "type": "diamond",
+      "id": "q1",
+      "x": 260,
+      "y": 360,
+      "width": 210,
+      "height": 120,
+      "strokeColor": "#b45309",
+      "backgroundColor": "#fef3c7",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "boundElements": [
+        {
+          "id": "q1_t",
+          "type": "text"
+        },
+        {
+          "id": "a1",
+          "type": "arrow"
+        },
+        {
+          "id": "a2",
+          "type": "arrow"
+        },
+        {
+          "id": "a_no",
+          "type": "arrow"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "q1_t",
+      "x": 314,
+      "y": 402,
+      "width": 102,
+      "height": 36,
+      "text": "auto on and\nno cooldown?",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "strokeColor": "#374151",
+      "roughness": 0,
+      "containerId": "q1"
+    },
+    {
+      "type": "rectangle",
+      "id": "drain",
+      "x": 790,
+      "y": 375,
+      "width": 250,
+      "height": 90,
+      "strokeColor": "#1e3a5f",
+      "backgroundColor": "#3b82f6",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "boundElements": [
+        {
+          "id": "drain_t",
+          "type": "text"
+        },
+        {
+          "id": "a4",
+          "type": "arrow"
+        },
+        {
+          "id": "w1_a",
+          "type": "arrow"
+        },
+        {
+          "id": "a2",
+          "type": "arrow"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "drain_t",
+      "x": 852,
+      "y": 400,
+      "width": 126,
+      "height": 40,
+      "text": "drain until\ntarget volume",
+      "fontSize": 16,
+      "fontFamily": 3,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "strokeColor": "#ffffff",
+      "roughness": 0,
+      "containerId": "drain"
+    },
+    {
+      "type": "rectangle",
+      "id": "refill",
+      "x": 1080,
+      "y": 375,
+      "width": 230,
+      "height": 90,
+      "strokeColor": "#1e3a5f",
+      "backgroundColor": "#3b82f6",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "boundElements": [
+        {
+          "id": "refill_t",
+          "type": "text"
+        },
+        {
+          "id": "a4",
+          "type": "arrow"
+        },
+        {
+          "id": "a5",
+          "type": "arrow"
+        },
+        {
+          "id": "w2_a",
+          "type": "arrow"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "refill_t",
+      "x": 1108,
+      "y": 400,
+      "width": 174,
+      "height": 40,
+      "text": "wait 3 s, then\nrefill same volume",
+      "fontSize": 16,
+      "fontFamily": 3,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "strokeColor": "#ffffff",
+      "roughness": 0,
+      "containerId": "refill"
+    },
+    {
+      "type": "ellipse",
+      "id": "done",
+      "x": 1350,
+      "y": 370,
+      "width": 210,
+      "height": 100,
+      "strokeColor": "#047857",
+      "backgroundColor": "#a7f3d0",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "boundElements": [
+        {
+          "id": "done_t",
+          "type": "text"
+        },
+        {
+          "id": "a5",
+          "type": "arrow"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "done_t",
+      "x": 1383,
+      "y": 400,
+      "width": 144,
+      "height": 40,
+      "text": "idle\n30 min cooldown",
+      "fontSize": 16,
+      "fontFamily": 3,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "strokeColor": "#374151",
+      "roughness": 0,
+      "containerId": "done"
+    },
+    {
+      "type": "arrow",
+      "id": "a1",
+      "x": 212,
+      "y": 420,
+      "width": 46,
+      "height": 0,
+      "strokeColor": "#c2410c",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          46,
+          0
+        ]
+      ],
+      "startBinding": {
+        "elementId": "start",
+        "focus": 0,
+        "gap": 2
+      },
+      "endBinding": {
+        "elementId": "q1",
+        "focus": 0,
+        "gap": 2
+      },
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "id": "a2",
+      "x": 472,
+      "y": 420,
+      "width": 316,
+      "height": 0,
+      "strokeColor": "#b45309",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          316,
+          0
+        ]
+      ],
+      "startBinding": {
+        "elementId": "q1",
+        "focus": 0,
+        "gap": 2
+      },
+      "endBinding": {
+        "elementId": "drain",
+        "focus": 0,
+        "gap": 2
+      },
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "text",
+      "id": "a2_l",
+      "x": 478,
+      "y": 396,
+      "width": 40,
+      "height": 18,
+      "text": "yes",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#b45309",
+      "roughness": 0
+    },
+    {
+      "type": "arrow",
+      "id": "a4",
+      "x": 1042,
+      "y": 420,
+      "width": 36,
+      "height": 0,
+      "strokeColor": "#1e3a5f",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          36,
+          0
+        ]
+      ],
+      "startBinding": {
+        "elementId": "drain",
+        "focus": 0,
+        "gap": 2
+      },
+      "endBinding": {
+        "elementId": "refill",
+        "focus": 0,
+        "gap": 2
+      },
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "id": "a5",
+      "x": 1312,
+      "y": 420,
+      "width": 36,
+      "height": 0,
+      "strokeColor": "#047857",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          36,
+          0
+        ]
+      ],
+      "startBinding": {
+        "elementId": "refill",
+        "focus": 0,
+        "gap": 2
+      },
+      "endBinding": {
+        "elementId": "done",
+        "focus": 0,
+        "gap": 2
+      },
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "id": "a_no",
+      "x": 365,
+      "y": 482,
+      "width": 0,
+      "height": 44,
+      "strokeColor": "#b45309",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          44
+        ]
+      ],
+      "startBinding": {
+        "elementId": "q1",
+        "focus": 0,
+        "gap": 2
+      },
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "text",
+      "id": "no_l",
+      "x": 300,
+      "y": 532,
+      "width": 200,
+      "height": 36,
+      "text": "no \u2192 keep\nmonitoring",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#64748b",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "vol",
+      "x": 790,
+      "y": 480,
+      "width": 220,
+      "height": 54,
+      "text": "7000 ml \u00d7 20 %\n= 1400 ml drained\n\u2248 89 s at 15.8 ml/s",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#64748b",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "h_c",
+      "x": 0,
+      "y": 640,
+      "width": 700,
+      "height": 25,
+      "text": "C  safety checks on every loop pass",
+      "fontSize": 20,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#1e40af",
+      "roughness": 0
+    },
+    {
+      "type": "text",
+      "id": "c_note",
+      "x": 0,
+      "y": 676,
+      "width": 460,
+      "height": 36,
+      "text": "they can stop the pumps at any point\nof the water change above",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#64748b",
+      "roughness": 0
+    },
+    {
+      "type": "rectangle",
+      "id": "w3",
+      "x": 520,
+      "y": 700,
+      "width": 220,
+      "height": 60,
+      "strokeColor": "#1e40af",
+      "backgroundColor": "#dbeafe",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "boundElements": [
+        {
+          "id": "w3_t",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "w3_t",
+      "x": 554,
+      "y": 712,
+      "width": 152,
+      "height": 36,
+      "text": "float switches\n(optional, off)",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "strokeColor": "#374151",
+      "roughness": 0,
+      "containerId": "w3"
+    },
+    {
+      "type": "rectangle",
+      "id": "w1",
+      "x": 790,
+      "y": 700,
+      "width": 250,
+      "height": 60,
+      "strokeColor": "#dc2626",
+      "backgroundColor": "#fee2e2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "boundElements": [
+        {
+          "id": "w1_t",
+          "type": "text"
+        },
+        {
+          "id": "w1_a",
+          "type": "arrow"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "w1_t",
+      "x": 831,
+      "y": 712,
+      "width": 168,
+      "height": 36,
+      "text": "pump on > 3 min\n\u2192 fault, pumps lock",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "strokeColor": "#374151",
+      "roughness": 0,
+      "containerId": "w1"
+    },
+    {
+      "type": "rectangle",
+      "id": "w2",
+      "x": 1080,
+      "y": 700,
+      "width": 230,
+      "height": 60,
+      "strokeColor": "#dc2626",
+      "backgroundColor": "#fee2e2",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "boundElements": [
+        {
+          "id": "w2_t",
+          "type": "text"
+        },
+        {
+          "id": "w2_a",
+          "type": "arrow"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "w2_t",
+      "x": 1119,
+      "y": 712,
+      "width": 152,
+      "height": 36,
+      "text": "stop or reset\nfrom dashboard",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "strokeColor": "#374151",
+      "roughness": 0,
+      "containerId": "w2"
+    },
+    {
+      "type": "arrow",
+      "id": "w1_a",
+      "x": 1020,
+      "y": 698,
+      "width": 0,
+      "height": 231,
+      "strokeColor": "#dc2626",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          -231
+        ]
+      ],
+      "startBinding": {
+        "elementId": "w1",
+        "focus": 0.8,
+        "gap": 2
+      },
+      "endBinding": {
+        "elementId": "drain",
+        "focus": -0.8,
+        "gap": 2
+      },
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "arrow",
+      "id": "w2_a",
+      "x": 1195,
+      "y": 698,
+      "width": 0,
+      "height": 231,
+      "strokeColor": "#dc2626",
+      "strokeWidth": 2,
+      "strokeStyle": "dashed",
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          -231
+        ]
+      ],
+      "startBinding": {
+        "elementId": "w2",
+        "focus": 0,
+        "gap": 2
+      },
+      "endBinding": {
+        "elementId": "refill",
+        "focus": 0,
+        "gap": 2
+      },
+      "endArrowhead": "arrow"
+    }
   ]
 }

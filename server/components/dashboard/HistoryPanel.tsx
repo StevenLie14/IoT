@@ -22,7 +22,7 @@ const MAX_POINTS = 1500;
 function valuesFor(name: ChartName, row: Reading): (number | null)[] {
   if (name === 'score') return [row.score, row.tds];
   if (name === 'turbidity') return [row.turb, row.turb_v];
-  if (name === 'temperature') return [row.t_tank, row.t_res];
+  if (name === 'temperature') return [row.t_tank];
   return [row.drain, row.fill];
 }
 
@@ -85,7 +85,6 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
   if (canvases.temperature) {
     charts.temperature = lineChart(canvases.temperature, [
       { label: 'Tank (°C)', borderColor: colors.bad },
-      { label: 'Reservoir (°C)', borderColor: colors.accent },
     ]);
   }
   if (canvases.pumps) {
@@ -207,7 +206,6 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
           <h3>
             Temperature
             <span className="key"><i style={{ background: 'var(--bad)' }} />tank</span>
-            <span className="key"><i style={{ background: 'var(--accent)' }} />reservoir</span>
           </h3>
           {chartBox('temperature')}
         </div>
