@@ -24,7 +24,7 @@ iot/
 | Persyaratan | Di kode |
 |---|---|
 | ESP32, minimal 3 sensor | DS18B20 (suhu), TDS, turbidity (+ volume buang perkiraan) |
-| Minimal 2 aktuator, rule-based | Pompa buang dan pompa isi (relay), buzzer, LED. Aturan R1 (skor < 60 tiga kali → ganti air 10/20/30%), R2 (selisih suhu), R3 (volume), R7 (timeout 3 menit), R10 (cooldown) |
+| Minimal 2 aktuator, rule-based | Pompa buang dan pompa isi (relay), buzzer, dan OLED. Aturan R1 (skor < 60 tiga kali → ganti air 10/20/30%), R2 (selisih suhu), R3 (volume), R7 (timeout 3 menit), R10 (cooldown) |
 | MQTT | `TOPIC_BASE/data` tiap 5 detik, `/event`, `/cmd`, `/status` |
 | Penyimpanan terus-menerus | PostgreSQL: tabel `readings` dan `events` |
 | Dashboard | Nilai live, status aktuator, grafik riwayat, tombol kontrol, log event |
@@ -46,7 +46,7 @@ PubSubClient (Nick O'Leary), ArduinoJson (Benoit Blanchon, versi 7).
 4. Upload, buka Serial Monitor 115200, akhir baris **Newline**.
 
 **Pin** (sama dengan sketch tes terakhir): OLED/ADS1115 SDA D21, SCL D22 · DS18B20 D4 · daya TDS D13 ·
-TDS → ADS A0 · turbidity → pembagi 10k/20k → ADS A1 · relay pompa buang D26, pompa isi D25 · buzzer D33 · LED D23.
+TDS → ADS A0 · turbidity → pembagi 10k/20k → ADS A1 · relay pompa buang D26, pompa isi D25 · buzzer D33.
 pH dan float switch dimatikan (`USE_PH false`, `USE_FLOATS false`).
 
 **Perintah Serial** (juga bisa dari dashboard):

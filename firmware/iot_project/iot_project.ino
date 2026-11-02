@@ -341,14 +341,8 @@ void publishData() {
 }
 
 // ---------------- Outputs ----------------
-void updateIndicators() {
+void updateBuzzer() {
   uint32_t now = millis();
-  // LED: steady = normal, 1 Hz = water change, 4 Hz = fault
-  bool led = true;
-  if (state == FAULT) led = (now / 125) % 2;
-  else if (state != IDLE) led = (now / 500) % 2;
-  digitalWrite(PIN_LED, led);
-  // Buzzer
   bool b = buzzerContinuous;
   if (!b && beepsLeft > 0 && (int32_t)(now - beepNext) >= 0) {
     beepPhase = !beepPhase; beepNext = now + 150;
@@ -429,7 +423,6 @@ void setup() {
   pinMode(PIN_RELAY_DRAIN, OUTPUT); relay(PIN_RELAY_DRAIN, false);
   pinMode(PIN_RELAY_FILL, OUTPUT);  relay(PIN_RELAY_FILL, false);
   pinMode(PIN_BUZZER, OUTPUT); digitalWrite(PIN_BUZZER, LOW);
-  pinMode(PIN_LED, OUTPUT);    digitalWrite(PIN_LED, LOW);
   pinMode(PIN_TDS_POWER, OUTPUT); digitalWrite(PIN_TDS_POWER, LOW);
   if (USE_FLOATS) { pinMode(PIN_FLOAT_TOP, INPUT_PULLUP); pinMode(PIN_FLOAT_BOT, INPUT_PULLUP); }
 
@@ -466,5 +459,5 @@ void loop() {
   handleSerial();
   runStateMachine();
   sensorCycle();
-  updateIndicators();
+  updateBuzzer();
 }

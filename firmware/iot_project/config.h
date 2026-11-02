@@ -18,7 +18,6 @@
 #define PIN_RELAY_DRAIN  26    // relay IN1 -> drain pump
 #define PIN_RELAY_FILL   25    // relay IN2 -> fill pump
 #define PIN_BUZZER       33
-#define PIN_LED          23
 #define PIN_FLOAT_TOP    19
 #define PIN_FLOAT_BOT    18
 
