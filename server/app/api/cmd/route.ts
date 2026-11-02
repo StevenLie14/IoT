@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/auth';
 import { logEvent, now, num } from '@/lib/db';
 import { TOPIC_BASE, store } from '@/lib/store';
 export const dynamic = 'force-dynamic';
-const ALLOWED = ['change', 'stop', 'reset', 'auto', 'demo', 'beep', 'drain', 'fill'];
+const ALLOWED = ['change', 'stop', 'auto', 'demo', 'beep', 'drain', 'fill'];
 export async function POST(req: Request) {
   const denied = await requireAuth(req); if (denied) return denied;
   const body = await req.json().catch(() => ({}));

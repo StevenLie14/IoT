@@ -167,7 +167,6 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-
 .actuator strong { font: 500 13px var(--mono); letter-spacing: 0.04em; text-transform: uppercase; display: flex; align-items: center; gap: 7px; }
 .actuator.on strong { color: var(--accent); }
 .actuator.on .dot { background: var(--accent); }
-.actuator.fault strong { color: var(--bad); }
 .actuator.waiting strong { color: var(--warn); }
 .actuator.waiting .dot { background: var(--warn); }
 .offline-note {
@@ -232,8 +231,6 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-
 .feedback { min-height: 20px; font-size: 13px; color: var(--ink-2); margin-top: 14px; }
 .feedback.error { color: var(--bad); }
 .feedback.ok { color: var(--ok); }
-.fault-banner { display: none; margin-top: 14px; padding: 10px 12px; border-radius: 4px; background: var(--bad-soft); color: var(--bad); font-size: 13px; }
-.fault-banner.show { display: block; }
 
 .dataset .count { display: flex; align-items: baseline; gap: 8px; }
 .dataset .count .num { font-size: 34px; font-weight: 500; letter-spacing: -0.03em; }

@@ -23,8 +23,9 @@ function score(turbIdx) {
   return Math.round((0.4 * sT + 0.3 * sU + 0.1 * sC) / 0.8);
 }
 
-function startChange(p, why) {
+function startChange(why) {
   if (state !== 'idle') return;
+  const p = 20;
   pct = p; target = TANK_ML * p / 100; drained = filled = 0;
   state = 'draining'; drain = 1; event('state', 'draining', p, why); event('actuator', 'drain', 1, why);
 }
@@ -36,8 +37,8 @@ c.on('connect', () => {
 });
 c.on('message', (t, b) => {
   let m; try { m = JSON.parse(b.toString()); } catch { return; }
-  if (m.cmd === 'change') startChange(m.pct || 20, 'manual change');
-  if (m.cmd === 'stop' || m.cmd === 'reset') { drain = fill = 0; state = 'idle'; event('state', 'idle', 0, m.cmd); }
+  if (m.cmd === 'change') startChange('manual change');
+  if (m.cmd === 'stop') { drain = fill = 0; state = 'idle'; event('state', 'idle', 0, m.cmd); }
   if (m.cmd === 'auto') { auto = m.on ? 1 : 0; event('mode', 'auto', auto, ''); }
   if (m.cmd === 'demo') { demo = m.on ? 1 : 0; event('mode', 'demo', demo, ''); }
   if (m.cmd === 'beep') event('actuator', 'buzzer', 1, 'beep');
@@ -60,17 +61,16 @@ setInterval(() => {
   temp += (Math.random() - 0.5) * 0.05;
 
   if (state === 'draining') { drained += ML_PER_SEC * dt; if (drained >= target) { drain = 0; event('actuator', 'drain', 0, 'target reached'); state = 'filling'; fill = 1; event('state', 'filling', pct, 'refill'); event('actuator', 'fill', 1, 'refill'); } }
-  else if (state === 'filling') { filled += ML_PER_SEC * dt; if (filled >= drained) { fill = 0; dirt *= 1 - pct / 100; state = 'idle'; cooldownUntil = Date.now() + (demo ? 60000 : 1800000) / SPEED; event('actuator', 'fill', 0, 'refill done'); event('state', 'idle', pct, `change done ${pct}%`); lowCount = 0; } }
+  else if (state === 'filling') { filled += ML_PER_SEC * dt; if (filled >= drained) { fill = 0; dirt *= 1 - pct / 100; state = 'idle'; cooldownUntil = Date.now() + (demo ? 60000 : 1800000) / SPEED; event('actuator', 'fill', 0, 'top float'); event('state', 'idle', pct, `change done ${pct}%`); lowCount = 0; } }
 
   const turbIdx = Math.min(Math.max((TURB_V_CLEAR - turbV) / 1.5 * 100, 0), 100);
   const s = score(turbIdx);
   lowCount = s < 60 ? lowCount + 1 : 0;
   if (auto && state === 'idle' && Date.now() > cooldownUntil && lowCount >= 3) {
-    const p = s < 40 ? 30 : s < 50 ? 20 : 10;
-    event('rule', 'R1', s, `score low 3x -> ${p}%`);
-    startChange(p, 'auto R1');
+    event('rule', 'R1', s, 'score below 60 for 3 readings');
+    startChange('auto R1');
   }
   pub('data', { ts: ts(), src: 'sim', t_tank: +temp.toFixed(2), tds: +tds.toFixed(1), tds_v: +(tds / 400).toFixed(3),
     turb: +turbIdx.toFixed(1), turb_v: +turbV.toFixed(3), ph: null, ph_v: null, flow: drain ? +(ML_PER_SEC * 0.06).toFixed(2) : 0,
-    vol_ml: Math.round(drained), f_top: 0, f_bot: 0, score: s, state, drain, fill, feeder: 0, buzzer: 0, auto, demo, fault: '' });
+    vol_ml: Math.round(drained), f_top: state === 'idle' ? 1 : 0, f_bot: 0, score: s, state, drain, fill, feeder: 0, buzzer: 0, auto, demo });
 }, INTERVAL);

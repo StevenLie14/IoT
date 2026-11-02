@@ -357,7 +357,7 @@
       "type": "text",
       "id": "s_note",
       "x": 0,
-      "y": 740,
+      "y": 900,
       "width": 340,
       "height": 56,
       "text": "5 V parts (turbidity, pumps,\nrelay) run from an LM2596;\nall grounds are joined",
@@ -864,7 +864,7 @@
       "x": 450,
       "y": 752,
       "width": 0,
-      "height": 150,
+      "height": 100,
       "strokeColor": "#b45309",
       "strokeWidth": 2,
       "roughness": 0,
@@ -875,7 +875,7 @@
         ],
         [
           0,
-          150
+          100
         ]
       ]
     },
@@ -919,32 +919,20 @@
       "roughness": 0
     },
     {
-      "type": "ellipse",
-      "id": "rd5",
-      "x": 444,
-      "y": 896,
-      "width": 12,
-      "height": 12,
-      "strokeColor": "#b45309",
-      "backgroundColor": "#fef3c7",
-      "fillStyle": "solid",
-      "strokeWidth": 2,
-      "roughness": 0
-    },
-    {
       "type": "text",
       "id": "r1",
       "x": 470,
       "y": 743,
       "width": 380,
       "height": 18,
-      "text": "R1  score < 60 \u00d73 \u2192 change 10/20/30 %",
+      "text": "R1  score < 60 \u00d73 \u2192 beep, drain 20 %",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#374151",
-      "roughness": 0
+      "roughness": 0,
+      "originalText": "R1  score < 60 \u00d73 \u2192 beep, drain 20 %"
     },
     {
       "type": "text",
@@ -953,13 +941,14 @@
       "y": 793,
       "width": 380,
       "height": 18,
-      "text": "R3  drained = target \u2192 refill by time",
+      "text": "R2  refill until the top float",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#374151",
-      "roughness": 0
+      "roughness": 0,
+      "originalText": "R2  refill until the top float"
     },
     {
       "type": "text",
@@ -968,28 +957,14 @@
       "y": 843,
       "width": 380,
       "height": 18,
-      "text": "R7  pump on > 3 min \u2192 fault, lock",
+      "text": "R3  30 min cooldown between changes",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#374151",
-      "roughness": 0
-    },
-    {
-      "type": "text",
-      "id": "r5",
-      "x": 470,
-      "y": 893,
-      "width": 380,
-      "height": 18,
-      "text": "R10 30 min cooldown between changes",
-      "fontSize": 14,
-      "fontFamily": 3,
-      "textAlign": "left",
-      "verticalAlign": "top",
-      "strokeColor": "#374151",
-      "roughness": 0
+      "roughness": 0,
+      "originalText": "R3  30 min cooldown between changes"
     },
     {
       "type": "ellipse",
@@ -2057,6 +2032,83 @@
         "focus": 0,
         "gap": 2
       },
+      "endArrowhead": "arrow"
+    },
+    {
+      "type": "rectangle",
+      "id": "s_float",
+      "x": 0,
+      "y": 740,
+      "width": 230,
+      "height": 64,
+      "strokeColor": "#c2410c",
+      "backgroundColor": "#fed7aa",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "roundness": {
+        "type": 3
+      },
+      "boundElements": [
+        {
+          "id": "s_float_t",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "s_float_t",
+      "x": 20,
+      "y": 760,
+      "width": 190,
+      "height": 23,
+      "text": "Float switches",
+      "fontSize": 18,
+      "fontFamily": 3,
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "strokeColor": "#374151",
+      "roughness": 0,
+      "containerId": "s_float",
+      "originalText": "Float switches"
+    },
+    {
+      "type": "text",
+      "id": "s_float_d",
+      "x": 0,
+      "y": 812,
+      "width": 340,
+      "height": 38,
+      "text": "top = tank full, bottom = tank low\nGPIO 19 / GPIO 18 \u00b7 internal pull-up",
+      "fontSize": 14,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "strokeColor": "#64748b",
+      "roughness": 0,
+      "originalText": "top = tank full, bottom = tank low\nGPIO 19 / GPIO 18 \u00b7 internal pull-up"
+    },
+    {
+      "type": "arrow",
+      "id": "a_float",
+      "x": 232,
+      "y": 772,
+      "width": 206,
+      "height": 332,
+      "strokeColor": "#c2410c",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          206,
+          -332
+        ]
+      ],
       "endArrowhead": "arrow"
     }
   ]

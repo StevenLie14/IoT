@@ -23,7 +23,6 @@ function lastReadingText(lastReadingAt: number, now: number) {
 
 function modeName(reading: Reading | null) {
   if (!reading) return '--';
-  if (reading.state === 'fault') return 'Fault';
   if (reading.demo) return 'Demo';
   if (reading.auto) return 'Auto';
   return 'Manual';
@@ -33,9 +32,7 @@ export default function TopBar({ health, reading, lastReadingAt, canSignOut, the
   const now = useNow();
   const deviceOnline = health?.device === 'online';
 
-  let tagClass = 'tag';
-  if (reading?.state === 'fault') tagClass += ' bad';
-  else if (reading?.auto) tagClass += ' accent';
+  const tagClass = reading?.auto ? 'tag accent' : 'tag';
 
   async function signOut() {
     await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });

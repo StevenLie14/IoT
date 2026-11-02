@@ -19,10 +19,10 @@ export function q<T extends Record<string, any> = Record<string, any>>(sql: stri
 
 export const COLS = [
   't_tank', 'tds', 'tds_v', 'turb', 'turb_v', 'ph', 'ph_v', 'flow', 'vol_ml', 'f_top', 'f_bot',
-  'score', 'state', 'drain', 'fill', 'feeder', 'buzzer', 'auto', 'demo', 'fault', 'ml',
+  'score', 'state', 'drain', 'fill', 'feeder', 'buzzer', 'auto', 'demo', 'ml',
 ] as const;
 
-export const TEXT_COLS = new Set(['state', 'fault', 'ml']);
+export const TEXT_COLS = new Set(['state', 'ml']);
 
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS readings (
@@ -33,7 +33,7 @@ const SCHEMA = `
     turb DOUBLE PRECISION, turb_v DOUBLE PRECISION, ph DOUBLE PRECISION, ph_v DOUBLE PRECISION,
     flow DOUBLE PRECISION, vol_ml DOUBLE PRECISION, f_top SMALLINT, f_bot SMALLINT,
     score SMALLINT, state TEXT, drain SMALLINT, fill SMALLINT, feeder SMALLINT,
-    buzzer SMALLINT, auto SMALLINT, demo SMALLINT, fault TEXT,
+    buzzer SMALLINT, auto SMALLINT, demo SMALLINT,
     ml TEXT,
     label TEXT,
     source TEXT

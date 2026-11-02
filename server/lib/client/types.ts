@@ -17,7 +17,6 @@ export type Reading = {
   buzzer: number | null;
   auto: number | null;
   demo: number | null;
-  fault: string | null;
   ml: string | null;
 };
 

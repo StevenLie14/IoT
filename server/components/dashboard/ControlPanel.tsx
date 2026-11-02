@@ -8,7 +8,6 @@ type Props = {
   reading: Reading | null;
   latestEvent: LogEvent | null;
   deviceOnline: boolean;
-  runningPercent: number | null;
 };
 
 type Pending = {
@@ -25,15 +24,13 @@ type Message = { text: string; kind: 'ok' | 'error' | '' };
 const RESPONSE_TIMEOUT_MS = 10000;
 const WORKING_STATES = ['draining', 'settling', 'filling'];
 
-function changeRequest(percent: number): Pending {
-  return {
-    key: `change-${percent}`,
-    command: { cmd: 'change', pct: percent },
-    isDone: (reading) => WORKING_STATES.includes(reading.state ?? ''),
-    confirmedBy: (event) => event.type === 'state' && WORKING_STATES.includes(event.name ?? ''),
-    doneMessage: `Water change ${percent}% is running`,
-  };
-}
+const changeRequest: Pending = {
+  key: 'change',
+  command: { cmd: 'change' },
+  isDone: (reading) => WORKING_STATES.includes(reading.state ?? ''),
+  confirmedBy: (event) => event.type === 'state' && WORKING_STATES.includes(event.name ?? ''),
+  doneMessage: 'Water change is running',
+};
 
 function testRequest(pump: 'drain' | 'fill'): Pending {
   return {
@@ -63,15 +60,7 @@ const stopRequest: Pending = {
   doneMessage: 'Pumps stopped',
 };
 
-const resetRequest: Pending = {
-  key: 'reset',
-  command: { cmd: 'reset' },
-  isDone: (reading) => reading.state !== 'fault',
-  confirmedBy: (event) => event.type === 'state' && event.name === 'idle',
-  doneMessage: 'Fault cleared',
-};
-
-export default function ControlPanel({ reading, latestEvent, deviceOnline, runningPercent }: Props) {
+export default function ControlPanel({ reading, latestEvent, deviceOnline }: Props) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [message, setMessage] = useState<Message>({ text: '', kind: '' });
 
@@ -144,9 +133,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline, runni
   const fill = actuatorState(Boolean(reading?.fill), 'fill');
   const buzzerOn = Boolean(reading?.buzzer);
 
-  let stateClass = 'actuator';
-  if (reading?.state === 'fault') stateClass += ' fault';
-  else if (WORKING_STATES.includes(reading?.state ?? '')) stateClass += ' on';
+  const stateClass = WORKING_STATES.includes(reading?.state ?? '') ? 'actuator on' : 'actuator';
 
   return (
     <div className="panel">
@@ -179,36 +166,17 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline, runni
           </div>
         )}
 
-        {reading?.fault && (
-          <div className="fault-banner show">Fault: {reading.fault}. Pumps are locked until you reset.</div>
-        )}
-
         <div className="control-group">
           <span className="title">Water change</span>
           <div className="row">
-            <div className="segmented" role="group" aria-label="Water change percentage">
-              {[10, 20, 30].map((percent) => {
-                let className = '';
-                if (isPending(`change-${percent}`)) className = 'is-pending';
-                else if (runningPercent === percent) className = 'active';
-                return (
-                  <button key={percent} className={className} disabled={disabled || !!pending || changeRunning}
-                    aria-pressed={runningPercent === percent} onClick={() => request(changeRequest(percent))}>
-                    {percent}%
-                  </button>
-                );
-              })}
-            </div>
+            <button className={`btn ${isPending('change') ? 'is-pending' : ''}`} disabled={disabled || !!pending || changeRunning}
+              onClick={() => request(changeRequest)}>
+              Start water change (20%)
+            </button>
             <button className={`btn danger ${isPending('stop') ? 'is-pending' : ''}`} disabled={disabled}
               onClick={() => request(stopRequest)}>
               Stop
             </button>
-            {reading?.state === 'fault' && (
-              <button className={`btn quiet ${isPending('reset') ? 'is-pending' : ''}`} disabled={disabled}
-                onClick={() => request(resetRequest)}>
-                Reset fault
-              </button>
-            )}
           </div>
         </div>
 

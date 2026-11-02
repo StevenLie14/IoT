@@ -174,7 +174,7 @@
     "type": "function",
     "z": "flow_main",
     "name": "split reading",
-    "func": "const d = msg.payload || {};\nconst onOff = (v) => (v ? 'ON' : 'off');\nconst temp = d.t_tank === null || d.t_tank === undefined ? null : d.t_tank;\nreturn [\n  { payload: d.score },\n  { payload: d.tds },\n  { payload: d.turb },\n  temp === null ? null : { payload: temp },\n  { payload: d.state },\n  { payload: onOff(d.drain) },\n  { payload: onOff(d.fill) },\n  { payload: d.fault || 'none' },\n  { payload: d.auto === 1 },\n  { topic: 'TDS (ppm)', payload: d.tds },\n  { topic: 'Score', payload: d.score },\n];",
+    "func": "const d = msg.payload || {};\nconst onOff = (v) => (v ? 'ON' : 'off');\nconst temp = d.t_tank === null || d.t_tank === undefined ? null : d.t_tank;\nconst level = d.f_top ? 'full (top float)' : d.f_bot ? 'low (bottom float)' : 'between floats';\nreturn [\n  { payload: d.score },\n  { payload: d.tds },\n  { payload: d.turb },\n  temp === null ? null : { payload: temp },\n  { payload: d.state },\n  { payload: onOff(d.drain) },\n  { payload: onOff(d.fill) },\n  { payload: level },\n  { payload: d.auto === 1 },\n  { topic: 'TDS (ppm)', payload: d.tds },\n  { topic: 'Score', payload: d.score },\n];",
     "outputs": 11,
     "timeout": 0,
     "noerr": 0,
@@ -206,7 +206,7 @@
         "t_fill"
       ],
       [
-        "t_fault"
+        "t_level"
       ],
       [
         "sw_auto"
@@ -462,15 +462,15 @@
     "wires": []
   },
   {
-    "id": "t_fault",
+    "id": "t_level",
     "type": "ui-text",
     "z": "flow_main",
     "group": "g_status",
     "order": 4,
     "width": 0,
     "height": 0,
-    "name": "Fault",
-    "label": "Fault",
+    "name": "Tank level",
+    "label": "Tank level",
     "format": "{{msg.payload}}",
     "layout": "row-spread",
     "style": false,
@@ -597,7 +597,7 @@
     "className": "",
     "icon": "",
     "iconPosition": "left",
-    "payload": "{\"cmd\": \"change\", \"pct\": 20}",
+    "payload": "{\"cmd\": \"change\"}",
     "payloadType": "json",
     "topic": "cmd",
     "topicType": "str",
@@ -659,52 +659,13 @@
     ]
   },
   {
-    "id": "b_reset",
-    "type": "ui-button",
-    "z": "flow_main",
-    "group": "g_ctrl",
-    "name": "Reset fault",
-    "label": "Reset fault",
-    "order": 4,
-    "width": 0,
-    "height": 0,
-    "emulateClick": false,
-    "tooltip": "",
-    "color": "",
-    "bgcolor": "",
-    "className": "",
-    "icon": "",
-    "iconPosition": "left",
-    "payload": "{\"cmd\": \"reset\"}",
-    "payloadType": "json",
-    "topic": "cmd",
-    "topicType": "str",
-    "buttonColor": "",
-    "textColor": "",
-    "iconColor": "",
-    "enableClick": true,
-    "enablePointerdown": false,
-    "pointerdownPayload": "",
-    "pointerdownPayloadType": "str",
-    "enablePointerup": false,
-    "pointerupPayload": "",
-    "pointerupPayloadType": "str",
-    "x": 620,
-    "y": 560,
-    "wires": [
-      [
-        "out_cmd"
-      ]
-    ]
-  },
-  {
     "id": "b_beep",
     "type": "ui-button",
     "z": "flow_main",
     "group": "g_ctrl",
     "name": "Test buzzer",
     "label": "Test buzzer",
-    "order": 5,
+    "order": 4,
     "width": 0,
     "height": 0,
     "emulateClick": false,
@@ -729,7 +690,7 @@
     "pointerupPayload": "",
     "pointerupPayloadType": "str",
     "x": 620,
-    "y": 600,
+    "y": 560,
     "wires": [
       [
         "out_cmd"

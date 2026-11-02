@@ -29,7 +29,7 @@
 
 // ---------- Parts that are fitted ----------
 #define USE_PH      false   // pH probe not fitted
-#define USE_FLOATS  false   // float switches not used
+#define USE_FLOATS  true    // top float = tank full, bottom float = tank low
 #define RELAY_ACTIVE_LOW true
 
 // ---------- Calibration (CAL) ----------
@@ -42,7 +42,6 @@
 #define PH_SLOPE          -4.863f   // (CAL) only if USE_PH
 #define PH_OFFSET         19.075f
 #define DRAIN_ML_PER_SEC   15.8f    // (CAL) measured: 236.59 ml in 15 s
-#define FILL_ML_PER_SEC    15.8f    // (CAL) measure the fill pump the same way
 #define TANK_WATER_ML      7000.0f  // (CAL) water volume in the tank
 #define FLOAT_TOP_TRIGGERED_LEVEL LOW
 #define FLOAT_BOT_TRIGGERED_LEVEL HIGH
@@ -50,7 +49,7 @@
 // ---------- Automation ----------
 #define SCORE_THRESHOLD        60
 #define LOW_READINGS_TO_ACT     3
+#define CHANGE_PCT             20     // share of the tank drained per water change
 #define COOLDOWN_MS       1800000UL   // 30 min (60 s in demo mode)
-#define PUMP_TIMEOUT_MS    180000UL   // 3 min safety limit per pump run
 #define SETTLE_MS            3000UL   // pause between drain and fill
 #define CYCLE_MS             5000UL   // sensor cycle and publish interval

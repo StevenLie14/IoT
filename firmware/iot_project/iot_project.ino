@@ -37,15 +37,14 @@ int   score = 100;
 int   mlClass = -1;      // on-device water-condition prediction (-1 = no model)
 
 // ---------------- State machine ----------------
-enum State { IDLE, DRAINING, SETTLING, FILLING, FAULT };
-const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling", "fault"};
+enum State { IDLE, DRAINING, SETTLING, FILLING };
+const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling"};
 State state = IDLE;
 bool autoMode = true, demoMode = false;
 int lowCount = 0;
 int changePct = 0;
-float targetMl = 0, drainedMl = 0, filledMl = 0;
+float targetMl = 0, drainedMl = 0;
 uint32_t stateSince = 0, cooldownUntil = 0;
-String faultMsg = "";
 
 // Manual test run (commands "drain N" / "fill N")
 bool manualDrain = false, manualFill = false;
@@ -53,10 +52,9 @@ uint32_t manualUntil = 0;
 
 // Actuator outputs
 bool drainOn = false, fillOn = false, buzzerOn = false;
-uint32_t pumpOnSince = 0;
 
 // Buzzer pattern (non-blocking)
-int beepsLeft = 0; bool beepPhase = false; uint32_t beepNext = 0; bool buzzerContinuous = false;
+int beepsLeft = 0; bool beepPhase = false; uint32_t beepNext = 0;
 
 // Sensor cycle phases
 uint32_t cycleStart = 0; int phase = 0;
@@ -87,7 +85,6 @@ void setDrain(bool on, const char* why) {
   if (on == drainOn) return;
   if (on && fillOn) { fillOn = false; relay(PIN_RELAY_FILL, false); }
   drainOn = on; relay(PIN_RELAY_DRAIN, on);
-  if (on) pumpOnSince = millis();
   publishEvent("actuator", "drain", on ? 1 : 0, why);
 }
 
@@ -95,7 +92,6 @@ void setFill(bool on, const char* why) {
   if (on == fillOn) return;
   if (on && drainOn) { drainOn = false; relay(PIN_RELAY_DRAIN, false); }
   fillOn = on; relay(PIN_RELAY_FILL, on);
-  if (on) pumpOnSince = millis();
   publishEvent("actuator", "fill", on ? 1 : 0, why);
 }
 
@@ -104,14 +100,6 @@ void beep(int n) { beepsLeft = n; beepPhase = false; beepNext = millis(); }
 void enterState(State s, const String& detail) {
   state = s; stateSince = millis();
   publishEvent("state", STATE_NAMES[s], changePct, detail);
-}
-
-void fault(const String& msg) {
-  setDrain(false, "fault"); setFill(false, "fault");
-  manualDrain = manualFill = false;
-  faultMsg = msg;
-  enterState(FAULT, msg);
-  beep(5);
 }
 
 bool floatTop() { return USE_FLOATS && digitalRead(PIN_FLOAT_TOP) == FLOAT_TOP_TRIGGERED_LEVEL; }
@@ -158,63 +146,54 @@ int computeScore() {
 }
 
 // ---------------- Water change ----------------
-void startChange(int pct, const char* reason) {
-  if (state == FAULT) { Serial.println("In fault: send reset first"); return; }
+void startChange(const char* reason) {
   if (state != IDLE) { Serial.println("Change already running"); return; }
-  if (pct < 5) pct = 5; if (pct > 50) pct = 50;
-  changePct = pct;
-  targetMl = TANK_WATER_ML * pct / 100.0f;
-  drainedMl = filledMl = 0;
-  // R5 pre-check: water already below low float
-  if (floatBot()) { fault("water already below low float"); return; }
+  manualDrain = manualFill = false;
+  changePct = CHANGE_PCT;
+  targetMl = TANK_WATER_ML * CHANGE_PCT / 100.0f;
+  drainedMl = 0;
   enterState(DRAINING, reason);
+  if (floatBot()) { enterState(SETTLING, "tank already low"); return; }
   setDrain(true, reason);
 }
 
 void stopAll(const char* why) {
   setDrain(false, why); setFill(false, why);
   manualDrain = manualFill = false;
-  if (state != FAULT && state != IDLE) enterState(IDLE, why);
+  if (state != IDLE) enterState(IDLE, why);
+}
+
+void finishChange(const char* why) {
+  setFill(false, why);
+  cooldownUntil = millis() + cooldownMs();                                                     // R3
+  enterState(IDLE, String("change done ") + CHANGE_PCT + "%");
+  lowCount = 0;
 }
 
 void runStateMachine() {
   uint32_t now = millis();
 
-  // Safety that applies in every state
-  if ((drainOn || fillOn) && now - pumpOnSince > PUMP_TIMEOUT_MS) fault("timeout: pump on > 3 min");          // R7
-  if (fillOn && floatTop()) { setFill(false, "top float"); buzzerContinuous = true; publishEvent("alert", "overflow", 1, "top float"); if (state == FILLING) enterState(IDLE, "stopped by top float"); } // R4
-  if (drainOn && floatBot()) { setDrain(false, "bottom float"); publishEvent("alert", "low_level", 1, "bottom float"); if (state == DRAINING) enterState(SETTLING, "stopped by bottom float"); } // R5
-  if (!floatTop()) buzzerContinuous = false;
-
-  // Manual test runs
-  if ((manualDrain || manualFill) && (int32_t)(now - manualUntil) >= 0) {
-    if (manualDrain) setDrain(false, "manual end");
-    if (manualFill) setFill(false, "manual end");
-    manualDrain = manualFill = false;
-  }
+  // Manual test runs stop on time or at a float
+  if (manualDrain && ((int32_t)(now - manualUntil) >= 0 || floatBot())) { setDrain(false, "manual end"); manualDrain = false; }
+  if (manualFill && ((int32_t)(now - manualUntil) >= 0 || floatTop())) { setFill(false, "manual end"); manualFill = false; }
 
   switch (state) {
-    case DRAINING:
+    case DRAINING:                                                                             // R1
       drainedMl = (now - stateSince) / 1000.0f * DRAIN_ML_PER_SEC;
-      if (drainedMl >= targetMl) {                                                               // R3
-        setDrain(false, "target reached");
+      if (drainedMl >= targetMl || floatBot()) {
+        setDrain(false, floatBot() ? "bottom float" : "target reached");
         enterState(SETTLING, String("drained ") + String(drainedMl, 0) + " ml");
       }
       break;
     case SETTLING:
       if (now - stateSince >= SETTLE_MS) {
-        enterState(FILLING, String("refill ") + String(drainedMl, 0) + " ml");
-        setFill(true, "refill");
+        enterState(FILLING, "refill until top float");
+        if (floatTop()) finishChange("tank already full");
+        else setFill(true, "refill");
       }
       break;
-    case FILLING:
-      filledMl = (now - stateSince) / 1000.0f * FILL_ML_PER_SEC;
-      if (filledMl >= drainedMl || !fillOn) {
-        setFill(false, "refill done");
-        cooldownUntil = now + cooldownMs();                                                      // R10
-        enterState(IDLE, String("change done ") + changePct + "%");
-        lowCount = 0;
-      }
+    case FILLING:                                                                              // R2
+      if (floatTop()) finishChange("top float");
       break;
     default: break;
   }
@@ -225,22 +204,20 @@ void runRules() {
   if (score < SCORE_THRESHOLD) lowCount++; else lowCount = 0;
   bool cooling = (int32_t)(millis() - cooldownUntil) < 0;
   if (autoMode && state == IDLE && !cooling && lowCount >= LOW_READINGS_TO_ACT) {
-    int pct = score < 40 ? 30 : (score < 50 ? 20 : 10);
-    publishEvent("rule", "R1", score, String("score low ") + LOW_READINGS_TO_ACT + "x -> " + pct + "%");
-    startChange(pct, "auto R1");
+    publishEvent("rule", "R1", score, String("score below ") + SCORE_THRESHOLD + " for " + LOW_READINGS_TO_ACT + " readings");
+    beep(3);
+    startChange("auto R1");
   }
-  if (USE_PH && !isnan(phVal) && (phVal < 5.5f || phVal > 8.5f)) publishEvent("alert", "ph", phVal, "pH out of range"); // R8
 }
 
 // ---------------- Commands (MQTT JSON and Serial text) ----------------
 void handleCommand(const String& cmd, int arg) {
-  if (cmd == "change")        startChange(arg > 0 ? arg : 20, "manual change");
+  if (cmd == "change")        startChange("manual change");
   else if (cmd == "stop")     stopAll("stop command");
-  else if (cmd == "reset")    { stopAll("reset"); faultMsg = ""; enterState(IDLE, "reset"); }
   else if (cmd == "auto")     { autoMode = arg != 0; publishEvent("mode", "auto", autoMode, ""); }
   else if (cmd == "demo")     { demoMode = arg != 0; publishEvent("mode", "demo", demoMode, ""); }
   else if (cmd == "beep")     beep(1);
-  else if (cmd == "drain" || cmd == "fill") {            // manual test, still under safety rules
+  else if (cmd == "drain" || cmd == "fill") {            // manual test, stops at the floats
     if (state != IDLE) { Serial.println("Only when idle"); return; }
     int sec = arg > 0 ? min(arg, 30) : 3;
     manualUntil = millis() + sec * 1000UL;
@@ -319,7 +296,6 @@ void publishData() {
   doc["buzzer"] = buzzerOn ? 1 : 0;
   doc["auto"] = autoMode ? 1 : 0;
   doc["demo"] = demoMode ? 1 : 0;
-  doc["fault"] = faultMsg;
   if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) doc["ml"] = WATER_LABELS[mlClass];
   else doc["ml"] = nullptr;
   char buf[768];
@@ -331,12 +307,11 @@ void publishData() {
 // ---------------- Outputs ----------------
 void updateBuzzer() {
   uint32_t now = millis();
-  bool b = buzzerContinuous;
-  if (!b && beepsLeft > 0 && (int32_t)(now - beepNext) >= 0) {
+  if (beepsLeft > 0 && (int32_t)(now - beepNext) >= 0) {
     beepPhase = !beepPhase; beepNext = now + 150;
     if (!beepPhase) beepsLeft--;
   }
-  if (!b) b = beepsLeft > 0 && beepPhase;
+  bool b = beepsLeft > 0 && beepPhase;
   buzzerOn = b;
   digitalWrite(PIN_BUZZER, b);
 }
@@ -357,8 +332,8 @@ void drawOled() {
   oled.setCursor(0, 34); oled.printf("TDS  %.0f ppm", tdsPpm);
   oled.setCursor(0, 44); oled.printf("Turb %.2fV (%.0f)", turbV, turbIdx);
   oled.setCursor(0, 54);
-  if (state == FAULT) oled.print(faultMsg.substring(0, 21));
-  else if (state != IDLE) oled.printf("%d%% %.0f/%.0f ml", changePct, state == FILLING ? filledMl : drainedMl, targetMl);
+  if (state == DRAINING) oled.printf("drain %.0f/%.0f ml", drainedMl, targetMl);
+  else if (state == FILLING) oled.print("fill to top float");
   else oled.printf("drain %s fill %s", drainOn ? "ON" : "-", fillOn ? "ON" : "-");
   oled.display();
 }
@@ -437,7 +412,7 @@ void setup() {
   mqtt.setBufferSize(1024);
   mqtt.setCallback(onMqtt);
 
-  Serial.println("Commands: change 20 | stop | reset | auto on/off | demo on/off | beep | drain 3 | fill 3");
+  Serial.println("Commands: change | stop | auto on/off | demo on/off | beep | drain 3 | fill 3");
   cycleStart = millis();
 }
 
