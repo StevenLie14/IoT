@@ -1,11 +1,3 @@
-// AquaGuard simulator: a fake ESP32 for testing the server and dashboard without hardware.
-// Every message carries "src":"sim", and the server stores those rows with source = 'sim',
-// so simulated data never mixes with real device data in the CSV export (?source=device).
-//
-// Usage: node tools/simulate.js [--interval 5000] [--speed 1]
-//   --speed N runs simulated time N times faster (for quick tests of the automation)
-// Env:   MQTT_URL, TOPIC_BASE (same as the server)
-
 const mqtt = require('mqtt');
 const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 const TOPIC_BASE = process.env.TOPIC_BASE || 'aquaguard/steven-2802941592';
@@ -15,7 +7,7 @@ const INTERVAL = opt('--interval', 5000);
 const SPEED = opt('--speed', 1);
 
 const TURB_V_CLEAR = 3.87, TDS_GOOD = 300, TDS_BAD = 700, TANK_ML = 7000, ML_PER_SEC = 15.8;
-let tds = 220, turbV = 3.85, temp = 26.5, dirt = 0;   // dirt rises slowly, like an unchanged tank
+let tds = 220, turbV = 3.85, temp = 26.5, dirt = 0;
 let state = 'idle', auto = 1, demo = 0, lowCount = 0, pct = 0, target = 0, drained = 0, filled = 0;
 let cooldownUntil = 0, drain = 0, fill = 0;
 
@@ -49,11 +41,19 @@ c.on('message', (t, b) => {
   if (m.cmd === 'auto') { auto = m.on ? 1 : 0; event('mode', 'auto', auto, ''); }
   if (m.cmd === 'demo') { demo = m.on ? 1 : 0; event('mode', 'demo', demo, ''); }
   if (m.cmd === 'beep') event('actuator', 'buzzer', 1, 'beep');
+  if ((m.cmd === 'drain' || m.cmd === 'fill') && state === 'idle') {
+    const seconds = Math.min(m.sec || 3, 30);
+    if (m.cmd === 'drain') { drain = 1; fill = 0; } else { fill = 1; drain = 0; }
+    event('actuator', m.cmd, 1, 'manual test');
+    setTimeout(() => {
+      if (m.cmd === 'drain') drain = 0; else fill = 0;
+      event('actuator', m.cmd, 0, 'manual end');
+    }, seconds * 1000);
+  }
 });
 
 setInterval(() => {
   const dt = INTERVAL / 1000 * SPEED;
-  // water slowly gets dirtier; noise on every sensor
   dirt = Math.min(dirt + 0.004 * dt * (1 + Math.random()), 1);
   tds = 220 + 520 * dirt + (Math.random() - 0.5) * 6;
   turbV = TURB_V_CLEAR - 1.6 * dirt + (Math.random() - 0.5) * 0.02;
