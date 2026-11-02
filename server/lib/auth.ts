@@ -1,72 +1,110 @@
-// Login. When DASHBOARD_PASSWORD is set, browsers sign in on /login and get a signed,
-// HttpOnly session cookie. Scripts (predict_live.py) may send HTTP Basic credentials instead.
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
 
-export const DASH_USER = process.env.DASHBOARD_USER || 'admin';
-const DASH_PASS = process.env.DASHBOARD_PASSWORD || '';
-export const authEnabled = () => !!DASH_PASS;
+const USERNAME = process.env.DASHBOARD_USER || 'admin';
+const PASSWORD = process.env.DASHBOARD_PASSWORD || '';
 
 export const SESSION_COOKIE = 'aquaguard_session';
 export const SESSION_DAYS = 7;
-// Key derived from the password: changing the password signs everyone out
-const KEY = crypto.createHash('sha256').update(`aquaguard-session:${DASH_USER}:${DASH_PASS}`).digest();
 
-const same = (a: string, b: string) => {
-  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
-  return x.length === y.length && crypto.timingSafeEqual(x, y);
-};
-const sign = (data: string) => crypto.createHmac('sha256', KEY).update(data).digest('base64url');
+const sessionKey = crypto.createHash('sha256').update(`aquaguard-session:${USERNAME}:${PASSWORD}`).digest();
+
+export function authEnabled() {
+  return PASSWORD !== '';
+}
+
+function sameText(a: string, b: string) {
+  const left = Buffer.from(String(a));
+  const right = Buffer.from(String(b));
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+function sign(data: string) {
+  return crypto.createHmac('sha256', sessionKey).update(data).digest('base64url');
+}
 
 export function makeSession() {
-  const data = Buffer.from(JSON.stringify({ u: DASH_USER, exp: Date.now() + SESSION_DAYS * 864e5 })).toString('base64url');
+  const payload = { user: USERNAME, expires: Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000 };
+  const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
   return `${data}.${sign(data)}`;
 }
-function validSession(token?: string | null) {
-  const [data, sig] = String(token || '').split('.');
-  if (!data || !sig || !same(sig, sign(data))) return false;
-  try { return JSON.parse(Buffer.from(data, 'base64url').toString()).exp > Date.now(); } catch { return false; }
-}
-function basicOk(header: string | null) {
-  const [type, value] = (header || '').split(' ');
-  if (type !== 'Basic' || !value) return false;
-  const text = Buffer.from(value, 'base64').toString();
-  const i = text.indexOf(':');
-  return i > 0 && same(text.slice(0, i), DASH_USER) && same(text.slice(i + 1), DASH_PASS);
-}
-export const checkCredentials = (user: string, pass: string) => same(user, DASH_USER) && same(pass, DASH_PASS);
 
-/** For pages (server components). */
+function isValidSession(token: string | undefined) {
+  if (!token) return false;
+  const [data, signature] = token.split('.');
+  if (!data || !signature || !sameText(signature, sign(data))) return false;
+
+  try {
+    const payload = JSON.parse(Buffer.from(data, 'base64url').toString());
+    return payload.expires > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function hasValidBasicAuth(header: string | null) {
+  if (!header?.startsWith('Basic ')) return false;
+  const decoded = Buffer.from(header.slice(6), 'base64').toString();
+  const separator = decoded.indexOf(':');
+  if (separator < 1) return false;
+  return sameText(decoded.slice(0, separator), USERNAME) && sameText(decoded.slice(separator + 1), PASSWORD);
+}
+
+export function checkCredentials(username: string, password: string) {
+  return sameText(username, USERNAME) && sameText(password, PASSWORD);
+}
+
 export async function isSignedIn() {
-  if (!DASH_PASS) return true;
-  return validSession((await cookies()).get(SESSION_COOKIE)?.value);
+  if (!authEnabled()) return true;
+  const cookieStore = await cookies();
+  return isValidSession(cookieStore.get(SESSION_COOKIE)?.value);
 }
 
-/** For route handlers: returns a 401 response when not signed in. */
-export async function requireAuth(req: Request): Promise<Response | null> {
-  if (!DASH_PASS || basicOk(req.headers.get('authorization')) || (await isSignedIn())) return null;
+export async function requireAuth(request: Request) {
+  if (!authEnabled()) return null;
+  if (hasValidBasicAuth(request.headers.get('authorization'))) return null;
+  if (await isSignedIn()) return null;
   return Response.json({ error: 'Not signed in' }, { status: 401 });
 }
 
-// Slow down password guessing: 10 failed attempts per IP per 15 minutes
-const g = globalThis as unknown as { __aquaguardFails?: Map<string, { count: number; since: number }> };
-const failures = (g.__aquaguardFails ??= new Map());
-const WINDOW = 15 * 60e3;
-export function tooManyFailures(ip: string) {
-  const f = failures.get(ip);
-  if (!f || Date.now() - f.since > WINDOW) { failures.delete(ip); return false; }
-  return f.count >= 10;
-}
-export function recordFailure(ip: string) {
-  const f = failures.get(ip);
-  if (!f || Date.now() - f.since > WINDOW) failures.set(ip, { count: 1, since: Date.now() });
-  else f.count++;
-}
-export const clearFailures = (ip: string) => failures.delete(ip);
+type Attempts = { count: number; since: number };
 
-export function clientIp(req: Request) {
-  return (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || 'local';
+const MAX_ATTEMPTS = 10;
+const LOCK_WINDOW_MS = 15 * 60 * 1000;
+const globalForAuth = globalThis as unknown as { aquaguardAttempts?: Map<string, Attempts> };
+const failedAttempts = globalForAuth.aquaguardAttempts ?? new Map<string, Attempts>();
+globalForAuth.aquaguardAttempts = failedAttempts;
+
+function currentAttempts(ip: string) {
+  const attempts = failedAttempts.get(ip);
+  if (attempts && Date.now() - attempts.since > LOCK_WINDOW_MS) {
+    failedAttempts.delete(ip);
+    return undefined;
+  }
+  return attempts;
 }
-export function isHttps(req: Request) {
-  return (req.headers.get('x-forwarded-proto') || new URL(req.url).protocol.replace(':', '')) === 'https';
+
+export function isLockedOut(ip: string) {
+  return (currentAttempts(ip)?.count ?? 0) >= MAX_ATTEMPTS;
+}
+
+export function recordFailedLogin(ip: string) {
+  const attempts = currentAttempts(ip);
+  if (attempts) attempts.count += 1;
+  else failedAttempts.set(ip, { count: 1, since: Date.now() });
+}
+
+export function clearFailedLogins(ip: string) {
+  failedAttempts.delete(ip);
+}
+
+export function clientIp(request: Request) {
+  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0].trim();
+  return forwarded || request.headers.get('x-real-ip') || 'local';
+}
+
+export function isHttps(request: Request) {
+  const forwardedProto = request.headers.get('x-forwarded-proto');
+  if (forwardedProto) return forwardedProto === 'https';
+  return new URL(request.url).protocol === 'https:';
 }

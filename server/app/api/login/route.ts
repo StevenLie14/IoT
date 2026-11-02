@@ -1,19 +1,45 @@
 import { cookies } from 'next/headers';
-import { SESSION_COOKIE, SESSION_DAYS, authEnabled, checkCredentials, clearFailures, clientIp, isHttps,
-  makeSession, recordFailure, tooManyFailures } from '@/lib/auth';
+import {
+  SESSION_COOKIE,
+  SESSION_DAYS,
+  authEnabled,
+  checkCredentials,
+  clearFailedLogins,
+  clientIp,
+  isHttps,
+  isLockedOut,
+  makeSession,
+  recordFailedLogin,
+} from '@/lib/auth';
+
 export const dynamic = 'force-dynamic';
-export async function POST(req: Request) {
+
+export async function POST(request: Request) {
   if (!authEnabled()) return Response.json({ ok: true });
-  const ip = clientIp(req);
-  if (tooManyFailures(ip)) return Response.json({ error: 'Too many attempts. Try again in 15 minutes.' }, { status: 429 });
-  const { username = '', password = '' } = await req.json().catch(() => ({}));
-  if (!checkCredentials(String(username), String(password))) {
-    recordFailure(ip);
+
+  const ip = clientIp(request);
+  if (isLockedOut(ip)) {
+    return Response.json({ error: 'Too many attempts. Try again in 15 minutes.' }, { status: 429 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const username = String(body.username ?? '');
+  const password = String(body.password ?? '');
+
+  if (!checkCredentials(username, password)) {
+    recordFailedLogin(ip);
     return Response.json({ error: 'Wrong username or password.' }, { status: 401 });
   }
-  clearFailures(ip);
-  (await cookies()).set(SESSION_COOKIE, makeSession(), {
-    httpOnly: true, sameSite: 'lax', secure: isHttps(req), maxAge: SESSION_DAYS * 86400, path: '/',
+
+  clearFailedLogins(ip);
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, makeSession(), {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isHttps(request),
+    maxAge: SESSION_DAYS * 24 * 60 * 60,
+    path: '/',
   });
+
   return Response.json({ ok: true });
 }
