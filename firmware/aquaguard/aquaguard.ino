@@ -15,6 +15,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include "config.h"
+#include "water_model.h"   // decision tree exported by ml/export_tree.py
 
 // ---------------- Objects ----------------
 Adafruit_SSD1306 oled(128, 64, &Wire, -1);
@@ -33,6 +34,7 @@ float tdsV = 0, tdsPpm = 0;
 float turbV = 0, turbIdx = 0;
 float phV = 0, phVal = NAN;
 int   score = 100;
+int   mlClass = -1;      // on-device water-condition prediction (-1 = no model)
 
 // ---------------- State machine ----------------
 enum State { IDLE, POSTPONED, DRAINING, SETTLING, FILLING, FAULT };
@@ -330,7 +332,9 @@ void publishData() {
   doc["auto"] = autoMode ? 1 : 0;
   doc["demo"] = demoMode ? 1 : 0;
   doc["fault"] = faultMsg;
-  char buf[512];
+  if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) doc["ml"] = WATER_LABELS[mlClass];
+  else doc["ml"] = nullptr;
+  char buf[768];
   size_t n = serializeJson(doc, buf, sizeof(buf));
   if (mqtt.connected()) mqtt.publish(topic("data").c_str(), (const uint8_t*)buf, n, false);
   Serial.println(buf);
@@ -365,6 +369,7 @@ void drawOled() {
   oled.setCursor(80, 0); oled.print(STATE_NAMES[state]);
   oled.setTextSize(2); oled.setCursor(0, 12); oled.printf("%3d", score);
   oled.setTextSize(1); oled.setCursor(40, 12); oled.print("score");
+  if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) { oled.setCursor(86, 12); oled.print(WATER_SHORT[mlClass]); }
   oled.setCursor(40, 22);
   if (!isnan(tTank)) oled.printf("%.1fC", tTank); else oled.print("--C");
   oled.setCursor(0, 34); oled.printf("TDS  %.0f ppm", tdsPpm);
@@ -404,6 +409,7 @@ void sensorCycle() {
       turbIdx = (TURB_V_CLEAR - turbV) / TURB_V_SPAN * 100.0f;
       if (turbIdx < 0) turbIdx = 0; if (turbIdx > 100) turbIdx = 100;
       if (USE_PH) { phV = readVoltsMedian(ADS_CH_PH) * DIVIDER_RATIO; phVal = PH_SLOPE * phV + PH_OFFSET; }
+      mlClass = classifyWaterFromReadings(tdsPpm, tdsV, turbIdx, turbV, isnan(tTank) ? 25.0f : tTank);
     }
     score = computeScore();
     runRules();
