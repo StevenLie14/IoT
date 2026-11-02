@@ -5,8 +5,11 @@
 // ---------- Wi-Fi and MQTT ----------
 #define WIFI_SSID     "YOUR_WIFI_NAME"
 #define WIFI_PASS     "YOUR_WIFI_PASSWORD"
-#define MQTT_HOST     "broker.hivemq.com"
-#define MQTT_PORT     1883
+#define MQTT_HOST     "broker.hivemq.com"   // e.g. "xxxx.s1.eu.hivemq.cloud" for a private broker
+#define MQTT_PORT     1883                  // 8883 when MQTT_USE_TLS is true
+#define MQTT_USE_TLS  false                 // true: encrypted connection, checked against mqtt_ca.h
+#define MQTT_USER     ""                    // empty = no login (public broker)
+#define MQTT_PASS     ""
 // Use something unique so nobody else on the public broker uses the same topics
 #define TOPIC_BASE    "iot-project/steven-2802941592"
 

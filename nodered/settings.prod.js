@@ -1,5 +1,9 @@
 const crypto = require('crypto');
 
+process.env.MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
+process.env.MQTT_USER = process.env.MQTT_USER || '';
+process.env.MQTT_PASSWORD = process.env.MQTT_PASSWORD || '';
+
 const user = process.env.DASHBOARD_USER || 'admin';
 const pass = process.env.DASHBOARD_PASSWORD || '';
 

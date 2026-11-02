@@ -3,6 +3,8 @@ import { COLS, TEXT_COLS, insertReadingSql, logEvent, now, num, q, waitForDb } f
 import { TOPIC_BASE, broadcast, health, store, type ServerReading } from './store';
 
 const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
+const MQTT_USER = process.env.MQTT_USER || undefined;
+const MQTT_PASSWORD = process.env.MQTT_PASSWORD || undefined;
 
 async function saveReading(message: Record<string, unknown>, source: string) {
   const epoch = now();
@@ -44,6 +46,8 @@ async function startIngest() {
   const client = mqtt.connect(MQTT_URL, {
     reconnectPeriod: 3000,
     clientId: `iot-project-server-${Math.random().toString(16).slice(2, 8)}`,
+    username: MQTT_USER,
+    password: MQTT_PASSWORD,
   });
   store.publish = (topic, payload) => client.publish(topic, payload);
 

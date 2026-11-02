@@ -11,7 +11,10 @@ let tds = 220, turbV = 3.85, temp = 26.5, dirt = 0;
 let state = 'idle', auto = 1, demo = 0, lowCount = 0, level = 1;
 let cooldownUntil = 0, drain = 0, fill = 0;
 
-const c = mqtt.connect(MQTT_URL, { will: { topic: `${TOPIC_BASE}/status`, payload: 'offline', retain: true } });
+const c = mqtt.connect(MQTT_URL, {
+  username: process.env.MQTT_USER || undefined,
+  password: process.env.MQTT_PASSWORD || undefined,
+  will: { topic: `${TOPIC_BASE}/status`, payload: 'offline', retain: true } });
 const pub = (sub, obj) => c.publish(`${TOPIC_BASE}/${sub}`, typeof obj === 'string' ? obj : JSON.stringify(obj), { retain: sub === 'status' });
 const ts = () => Math.floor(Date.now() / 1000);
 const event = (type, name, value, detail) => pub('event', { ts: ts(), src: 'sim', type, name, value, detail });

@@ -9,9 +9,9 @@
   {
     "id": "broker",
     "type": "mqtt-broker",
-    "name": "HiveMQ public",
-    "broker": "broker.hivemq.com",
-    "port": "1883",
+    "name": "MQTT broker",
+    "broker": "${MQTT_URL}",
+    "port": "",
     "clientid": "",
     "autoConnect": true,
     "usetls": false,
