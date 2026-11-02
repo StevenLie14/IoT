@@ -425,14 +425,15 @@
       "y": 325,
       "width": 210,
       "height": 90,
-      "text": "ESP32\nhealth score 0\u2013100\nevery 5 seconds",
+      "text": "ESP32\nhealth score 0\u2013100\nevery 2 seconds",
       "fontSize": 20,
       "fontFamily": 3,
       "textAlign": "center",
       "verticalAlign": "middle",
       "strokeColor": "#ffffff",
       "roughness": 0,
-      "containerId": "esp"
+      "containerId": "esp",
+      "originalText": "ESP32\nhealth score 0\u2013100\nevery 2 seconds"
     },
     {
       "type": "arrow",
@@ -926,14 +927,14 @@
       "y": 743,
       "width": 380,
       "height": 18,
-      "text": "R1  score < 60 \u00d73 \u2192 beep, drain",
+      "text": "R1  score < 60 \u00d75 \u2192 beep, drain",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#374151",
       "roughness": 0,
-      "originalText": "R1  score < 60 \u00d73 \u2192 beep, drain"
+      "originalText": "R1  score < 60 \u00d75 \u2192 beep, drain"
     },
     {
       "type": "text",
@@ -1240,13 +1241,14 @@
       "y": 513,
       "width": 330,
       "height": 18,
-      "text": "/data    one reading every 5 s",
+      "text": "/data    one reading every 2 s",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#374151",
-      "roughness": 0
+      "roughness": 0,
+      "originalText": "/data    one reading every 2 s"
     },
     {
       "type": "text",
@@ -1937,13 +1939,14 @@
       "y": 472,
       "width": 220,
       "height": 54,
-      "text": "readings  one row / 5 s\nevents    every action\nsettings  current label",
+      "text": "readings  one row / 2 s\nevents    every action\nsettings  current label",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#64748b",
-      "roughness": 0
+      "roughness": 0,
+      "originalText": "readings  one row / 2 s\nevents    every action\nsettings  current label"
     },
     {
       "type": "rectangle",

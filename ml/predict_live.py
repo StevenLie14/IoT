@@ -1,4 +1,4 @@
-"""Live prediction: read the newest reading from the IoT Project server every 5 s, classify the
+"""Live prediction: read the newest reading from the IoT Project server every 2 s, classify the
 water condition with the trained model, and send the result back so the dashboard shows it
 in the "AI prediction" card.
 
@@ -23,7 +23,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--server", default="http://localhost:3000")
     ap.add_argument("--model", default="models/water_condition_model.joblib")
-    ap.add_argument("--interval", type=float, default=5.0)
+    ap.add_argument("--interval", type=float, default=2.0)
     ap.add_argument("--once", action="store_true", help="predict one reading and exit")
     ap.add_argument("--user", default=os.environ.get("DASHBOARD_USER", "admin"))
     ap.add_argument("--password", default=os.environ.get("DASHBOARD_PASSWORD", ""))

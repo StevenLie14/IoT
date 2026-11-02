@@ -1,5 +1,5 @@
 // IoT Project - main firmware (ESP32)
-// Sensing -> score -> rule-based water change -> MQTT JSON every 5 s.
+// Sensing -> score -> rule-based water change -> MQTT JSON every 2 s.
 // Libraries: Adafruit SSD1306 (+GFX, BusIO), Adafruit ADS1X15, OneWire,
 //            DallasTemperature, PubSubClient, ArduinoJson (7.x)
 // All settings are in config.h.
@@ -333,8 +333,8 @@ void drawOled() {
 // ---------------- Sensor cycle (non-blocking) ----------------
 // 0 s TDS power on + start temperature conversion
 // 1 s read temperatures and TDS, TDS power off
-// 4 s read turbidity (and pH), compute score, run rules
-// 5 s publish
+// 1.5 s read turbidity (and pH), compute score, run rules
+// 2 s publish
 void sensorCycle() {
   uint32_t t = millis() - cycleStart;
   if (phase == 0) {
@@ -351,7 +351,7 @@ void sensorCycle() {
     }
     digitalWrite(PIN_TDS_POWER, LOW);
     phase = 2;
-  } else if (phase == 2 && t >= 4000) {
+  } else if (phase == 2 && t >= 1500) {
     if (adsOk) {
       turbV = readVoltsMedian(ADS_CH_TURB) * DIVIDER_RATIO;
       turbIdx = (TURB_V_CLEAR - turbV) / TURB_V_SPAN * 100.0f;

@@ -22,8 +22,8 @@ import pandas as pd
 from sklearn.ensemble import IsolationForest
 
 RANGES = {"tds": (0, 2000), "turb_v": (0.05, 4.8), "t_tank": (5, 40)}   # physically plausible values
-JUMP = {"tds": 150, "turb_v": 0.8, "t_tank": 2.0}                       # max change between 5 s readings
-STUCK_ROWS = 24                                                         # 2 minutes at 5 s
+JUMP = {"tds": 150, "turb_v": 0.8, "t_tank": 2.0}                       # max change between 2 s readings
+STUCK_ROWS = 60                                                         # 2 minutes at 2 s
 
 
 def main():

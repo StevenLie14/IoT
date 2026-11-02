@@ -3,7 +3,7 @@ const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 const TOPIC_BASE = process.env.TOPIC_BASE || 'iot-project/steven-2802941592';
 const args = process.argv.slice(2);
 const opt = (name, def) => (args.includes(name) ? Number(args[args.indexOf(name) + 1]) || def : def);
-const INTERVAL = opt('--interval', 5000);
+const INTERVAL = opt('--interval', 2000);
 const SPEED = opt('--speed', 1);
 
 const TURB_V_CLEAR = 3.87, TDS_GOOD = 300, TDS_BAD = 700, LEVEL_PER_SEC = 0.003, LOW_LEVEL = 0.75;
@@ -64,8 +64,8 @@ setInterval(() => {
   const turbIdx = Math.min(Math.max((TURB_V_CLEAR - turbV) / 1.5 * 100, 0), 100);
   const s = score(turbIdx);
   lowCount = s < 60 ? lowCount + 1 : 0;
-  if (auto && state === 'idle' && Date.now() > cooldownUntil && lowCount >= 3) {
-    event('rule', 'R1', s, 'score below 60 for 3 readings');
+  if (auto && state === 'idle' && Date.now() > cooldownUntil && lowCount >= 5) {
+    event('rule', 'R1', s, 'score below 60 for 5 readings');
     startChange('auto R1');
   }
   pub('data', { ts: ts(), src: 'sim', t_tank: +temp.toFixed(2), tds: +tds.toFixed(1), tds_v: +(tds / 400).toFixed(3),
