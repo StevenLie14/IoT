@@ -7,9 +7,11 @@ aquaguard_project/
 ├─ firmware/aquaguard/      Firmware ESP32 (sensor, skor, aturan otomatis, MQTT)
 │   ├─ aquaguard.ino
 │   └─ config.h             SEMUA pengaturan dan kalibrasi ada di sini
-├─ server/                  Server Node.js: MQTT -> PostgreSQL, dashboard, ekspor CSV
-│   ├─ server.js
-│   ├─ public/              Dashboard (index.html, app.js)
+├─ server/                  Next.js full-stack (React + API): MQTT -> PostgreSQL, dashboard, ekspor CSV
+│   ├─ app/                 Halaman (dashboard, login) dan API (app/api/*/route.ts)
+│   ├─ components/          Komponen React (Dashboard, LoginForm)
+│   ├─ lib/                 Database, MQTT ingest, login
+│   ├─ instrumentation.ts   Menyalakan koneksi MQTT dan database saat server start
 │   └─ tools/simulate.js    ESP32 palsu untuk tes tanpa hardware
 └─ ml/                      Machine learning (Python)
     ├─ train_classifier.py  Klasifikasi kondisi air: clear / slightly_turbid / dirty
@@ -63,14 +65,18 @@ docker compose up -d --build
 
 Buka **http://localhost:7575**. Laptop cukup terhubung internet; tidak harus satu Wi-Fi dengan ESP32.
 
-Tanpa Docker (butuh Node.js 22+ dan PostgreSQL yang sudah terpasang):
+Tanpa Docker (butuh Node.js 20.9+ dan PostgreSQL yang sudah terpasang):
 
 ```bash
 cd server
 npm install
-PGHOST=localhost PGUSER=aquaguard PGPASSWORD=... PGDATABASE=aquaguard npm start
+PGHOST=localhost PGUSER=aquaguard PGPASSWORD=... PGDATABASE=aquaguard npm run dev
 ```
 Lalu buka http://localhost:3000. Tabel dibuat otomatis saat server pertama kali jalan.
+Untuk mode produksi: `npm run build` lalu `npm start`.
+
+Server ini harus berjalan terus (koneksi MQTT selalu tersambung), jadi jalankan di server sendiri
+atau Docker, bukan di platform serverless seperti Vercel.
 
 Tes tanpa hardware (data ditandai `sim` dan tidak ikut di CSV device):
 
@@ -139,7 +145,7 @@ Mengikuti pola repo `stevenlie` dan `serverh1`: GitHub Actions di runner `shin` 
 push ke Harbor, lalu `docker compose up` di server. Nginx + SSL dibuat lewat repo `ansible-infrastructure`.
 
 File yang dipakai: `Dockerfile`, `docker-compose.yml`, `.github/workflows/deploy.yml`.
-Ada dua container: `aquaguard` (Node 26, port **7575**) dan `aquaguard-db` (PostgreSQL 17, tidak dibuka ke luar).
+Ada dua container: `aquaguard` (Next.js di Node 26, port **7575**) dan `aquaguard-db` (PostgreSQL 17, tidak dibuka ke luar).
 Data database tersimpan di volume Docker `aquaguard_pg`.
 
 ### Langkah sekali saja
