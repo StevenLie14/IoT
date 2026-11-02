@@ -287,12 +287,9 @@ void publishData() {
   doc["state"] = STATE_NAMES[state];
   doc["drain"] = drainOn ? 1 : 0;
   doc["fill"] = fillOn ? 1 : 0;
-  doc["feeder"] = 0;
   doc["buzzer"] = buzzerOn ? 1 : 0;
   doc["auto"] = autoMode ? 1 : 0;
   doc["demo"] = demoMode ? 1 : 0;
-  if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) doc["ml"] = WATER_LABELS[mlClass];
-  else doc["ml"] = nullptr;
   char buf[768];
   size_t n = serializeJson(doc, buf, sizeof(buf));
   if (mqtt.connected()) mqtt.publish(topic("data").c_str(), (const uint8_t*)buf, n, false);

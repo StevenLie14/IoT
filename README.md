@@ -147,8 +147,11 @@ python export_tree.py --csv iot_project_dataset_2026-11-01.csv
 
 Skrip ini melatih decision tree (fitur TDS dan turbidity, kedalaman maksimal 4), menampilkan akurasi
 di data uji, lalu menulis `firmware/iot_project/water_model.h` berisi aturan `if-else`. Upload ulang firmware.
-ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY), mengirimnya di kolom `ml` lewat MQTT,
-dan dashboard menampilkannya di kartu "AI prediction". Kolom `ml` juga ikut di CSV.
+ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY). Untuk mengirimnya ke dashboard, tambahkan lagi
+field `ml` di `publishData()` (dihapus untuk Assignment 2 karena belum ada model); server dan kartu "AI prediction" sudah siap.
+
+**Isi CSV dataset** (`/api/export.csv`, hanya data dari ESP32): `timestamp_wib`, `t_tank`, `tds`, `tds_v`, `turb`, `turb_v`,
+`f_top`, `f_bot`, `score`, `state`, `drain`, `fill`, `buzzer`, `auto`, `demo`, `label`. Data simulator: `?source=sim`.
 
 Sebelum model dibuat, `water_model.h` berisi placeholder sehingga firmware tetap bisa di-compile.
 Latih dan ekspor ulang setiap kali sensor dikalibrasi ulang.

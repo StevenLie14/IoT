@@ -73,5 +73,5 @@ setInterval(() => {
   }
   pub('data', { ts: ts(), src: 'sim', t_tank: +temp.toFixed(2), tds: +tds.toFixed(1), tds_v: +(tds / 400).toFixed(3),
     turb: +turbIdx.toFixed(1), turb_v: +turbV.toFixed(3),
-    f_top: level >= 1 ? 1 : 0, f_bot: level <= LOW_LEVEL ? 1 : 0, score: s, state, drain, fill, feeder: 0, buzzer: 0, auto, demo });
+    f_top: level >= 1 ? 1 : 0, f_bot: level <= LOW_LEVEL ? 1 : 0, score: s, state, drain, fill, buzzer: 0, auto, demo });
 }, INTERVAL);

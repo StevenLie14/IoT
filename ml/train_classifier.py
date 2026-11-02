@@ -40,7 +40,7 @@ LABEL_ORDER = ["clear", "slightly_turbid", "dirty"]
 
 def load(path, features, include_sim):
     df = pd.read_csv(path)
-    missing = [c for c in features + ["label", "epoch"] if c not in df.columns]
+    missing = [c for c in features + ["label", "timestamp_wib"] if c not in df.columns]
     if missing:
         sys.exit(f"CSV is missing columns: {missing}")
     if not include_sim and "source" in df.columns:
@@ -50,7 +50,8 @@ def load(path, features, include_sim):
     for c in ("drain", "fill"):
         if c in df.columns:
             df = df[df[c].fillna(0) == 0]
-    return df.sort_values("epoch").reset_index(drop=True)
+    df["time"] = pd.to_datetime(df["timestamp_wib"])
+    return df.sort_values("time").reset_index(drop=True)
 
 
 def time_split(df, test_frac):

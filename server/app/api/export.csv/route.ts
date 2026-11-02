@@ -1,22 +1,24 @@
 import { requireAuth } from '@/lib/auth';
 import { csvResponse, escapeCsv, toWib } from '@/lib/csv';
-import { COLS, q } from '@/lib/db';
+import { q } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+
+const DATA_COLUMNS = [
+  't_tank', 'tds', 'tds_v', 'turb', 'turb_v', 'f_top', 'f_bot',
+  'score', 'state', 'drain', 'fill', 'buzzer', 'auto', 'demo', 'label',
+];
 
 export async function GET(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;
 
-  const source = new URL(request.url).searchParams.get('source');
-  const result = source
-    ? await q('SELECT * FROM readings WHERE source = $1 ORDER BY id', [source])
-    : await q('SELECT * FROM readings ORDER BY id');
+  const source = new URL(request.url).searchParams.get('source') || 'device';
+  const result = await q('SELECT * FROM readings WHERE source = $1 ORDER BY id', [source]);
 
-  const header = ['id', 'timestamp_wib', 'epoch', 'device_ts', ...COLS, 'label', 'source'];
-  const lines = [header.join(',')];
+  const lines = [['timestamp_wib', ...DATA_COLUMNS].join(',')];
   for (const row of result.rows) {
-    const values = [row.id, toWib(row.epoch), row.epoch, row.device_ts, ...COLS.map((column) => row[column]), row.label, row.source];
+    const values = [toWib(row.epoch), ...DATA_COLUMNS.map((column) => row[column])];
     lines.push(values.map(escapeCsv).join(','));
   }
 

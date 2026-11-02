@@ -19,7 +19,7 @@ export function q<T extends Record<string, any> = Record<string, any>>(sql: stri
 
 export const COLS = [
   't_tank', 'tds', 'tds_v', 'turb', 'turb_v', 'f_top', 'f_bot',
-  'score', 'state', 'drain', 'fill', 'feeder', 'buzzer', 'auto', 'demo', 'ml',
+  'score', 'state', 'drain', 'fill', 'buzzer', 'auto', 'demo', 'ml',
 ] as const;
 
 export const TEXT_COLS = new Set(['state', 'ml']);
@@ -32,7 +32,7 @@ const SCHEMA = `
     t_tank DOUBLE PRECISION, tds DOUBLE PRECISION, tds_v DOUBLE PRECISION,
     turb DOUBLE PRECISION, turb_v DOUBLE PRECISION,
     f_top SMALLINT, f_bot SMALLINT,
-    score SMALLINT, state TEXT, drain SMALLINT, fill SMALLINT, feeder SMALLINT,
+    score SMALLINT, state TEXT, drain SMALLINT, fill SMALLINT,
     buzzer SMALLINT, auto SMALLINT, demo SMALLINT,
     ml TEXT,
     label TEXT,

@@ -38,7 +38,8 @@ def main():
     if not a.include_sim and "source" in df.columns:
         df = df[df["source"] == "device"]
     feats = [c for c in RANGES if c in df.columns]
-    df = df.dropna(subset=feats).sort_values("epoch").reset_index(drop=True)
+    df["time"] = pd.to_datetime(df["timestamp_wib"])
+    df = df.dropna(subset=feats).sort_values("time").reset_index(drop=True)
     if len(df) < 50:
         sys.exit("Need at least 50 rows.")
     pumps = (df.get("drain", 0).fillna(0) + df.get("fill", 0).fillna(0)) > 0
@@ -65,7 +66,7 @@ def main():
 
     os.makedirs(a.out, exist_ok=True)
     out = df[df["anomaly"]]
-    keep = [c for c in ["id", "timestamp_wib", "epoch"] + feats + ["drain", "fill", "state", "reasons"] if c in df.columns]
+    keep = [c for c in ["timestamp_wib"] + feats + ["drain", "fill", "state", "reasons"] if c in df.columns]
     out[keep].to_csv(os.path.join(a.out, "anomalies.csv"), index=False)
 
     print(f"Rows checked: {len(df)}, flagged: {len(out)} ({len(out) / len(df):.1%})")
@@ -73,7 +74,7 @@ def main():
 
     fig, axes = plt.subplots(len(feats), 1, figsize=(10, 2.4 * len(feats)), sharex=True)
     axes = axes if len(feats) > 1 else [axes]
-    x = pd.to_datetime(df["epoch"], unit="s") + pd.Timedelta(hours=7)
+    x = df["time"]
     for ax, c in zip(axes, feats):
         ax.plot(x, df[c], lw=0.8, color="#2563eb")
         ax.scatter(x[df["anomaly"]], df.loc[df["anomaly"], c], color="#d64545", s=12, zorder=3, label="anomaly")
