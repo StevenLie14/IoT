@@ -1,0 +1,153 @@
+# AquaGuard AIoT: kode lengkap
+
+Paket ini berisi semua kode untuk Assignment 2 dan tahap AI (AOL):
+
+```
+aquaguard_project/
+├─ firmware/aquaguard/      Firmware ESP32 (sensor, skor, aturan otomatis, MQTT)
+│   ├─ aquaguard.ino
+│   └─ config.h             SEMUA pengaturan dan kalibrasi ada di sini
+├─ server/                  Server Node.js: MQTT -> SQLite, dashboard, ekspor CSV
+│   ├─ server.js
+│   ├─ public/              Dashboard (index.html, app.js)
+│   └─ tools/simulate.js    ESP32 palsu untuk tes tanpa hardware
+└─ ml/                      Machine learning (Python)
+    ├─ train_classifier.py  Klasifikasi kondisi air: clear / slightly_turbid / dirty
+    ├─ anomaly_detection.py Deteksi anomali sensor
+    └─ predict_live.py      Prediksi langsung, hasilnya tampil di dashboard
+```
+
+## Kesesuaian dengan aturan tugas
+
+| Persyaratan | Di kode |
+|---|---|
+| ESP32, minimal 3 sensor | DS18B20 (suhu), TDS, turbidity (+ volume buang perkiraan) |
+| Minimal 2 aktuator, rule-based | Pompa buang dan pompa isi (relay), buzzer, LED. Aturan R1 (skor < 60 tiga kali → ganti air 10/20/30%), R2 (selisih suhu), R3 (volume), R7 (timeout 3 menit), R10 (cooldown) |
+| MQTT | `TOPIC_BASE/data` tiap 5 detik, `/event`, `/cmd`, `/status` |
+| Penyimpanan terus-menerus | SQLite (`server/aquaguard.db`): tabel `readings` dan `events` |
+| Dashboard | Nilai live, status aktuator, grafik riwayat, tombol kontrol, log event |
+| Dataset minimal 1.000 baris | Ekspor CSV dari dashboard. 1.000 baris = sekitar 83 menit logging |
+
+## 1. Firmware ESP32
+
+**Library** (Arduino IDE → Library Manager): Adafruit SSD1306, Adafruit GFX, Adafruit BusIO,
+Adafruit ADS1X15, OneWire (Paul Stoffregen), DallasTemperature (Miles Burton),
+PubSubClient (Nick O'Leary), ArduinoJson (Benoit Blanchon, versi 7).
+
+**Board:** ESP32 Dev Module (core esp32 by Espressif 3.x).
+
+**Langkah:**
+1. Buka `firmware/aquaguard/aquaguard.ino` (folder `aquaguard` harus berisi `aquaguard.ino` dan `config.h`).
+2. Di `config.h` isi `WIFI_SSID`, `WIFI_PASS`. `TOPIC_BASE` boleh dibiarkan, asal sama dengan server.
+3. Cek nilai kalibrasi: `TURB_V_CLEAR` (tegangan turbidity di air bening), `DRAIN_ML_PER_SEC` (15,8 dari tes Anda),
+   `FILL_ML_PER_SEC` (ukur pompa isi dengan cara yang sama), `TANK_WATER_ML` (volume air di bak).
+4. Upload, buka Serial Monitor 115200, akhir baris **Newline**.
+
+**Pin** (sama dengan sketch tes terakhir): OLED/ADS1115 SDA D21, SCL D22 · DS18B20 D4 · daya TDS D13 ·
+TDS → ADS A0 · turbidity → pembagi 10k/20k → ADS A1 · relay pompa buang D26, pompa isi D25 · buzzer D33 · LED D23.
+pH dan float switch dimatikan (`USE_PH false`, `USE_FLOATS false`).
+
+**Perintah Serial** (juga bisa dari dashboard):
+`change 20` · `stop` · `reset` · `auto on` / `auto off` · `demo on` / `demo off` · `beep` · `drain 3` · `fill 3`
+
+**Mode demo** memperpendek cooldown jadi 60 detik dan penundaan suhu jadi 30 detik, cocok untuk presentasi.
+
+## 2. Server dan dashboard
+
+Butuh **Node.js 22.13 atau lebih baru** (memakai SQLite bawaan Node, tanpa instalasi database).
+
+```bash
+cd server
+npm install
+npm start
+```
+
+Buka **http://localhost:3000**. Laptop cukup terhubung internet; tidak harus satu Wi-Fi dengan ESP32.
+
+Peringatan `ExperimentalWarning: SQLite` di terminal itu normal.
+
+Tes tanpa hardware (data ditandai `sim` dan tidak ikut di CSV device):
+
+```bash
+npm run sim
+```
+
+Kalau Wi-Fi kampus memblokir MQTT (port 1883), pakai hotspot HP untuk ESP32 dan laptop.
+
+## 3. Mengumpulkan dataset
+
+1. Jalankan server, nyalakan ESP32. Titik "ESP32" dan "Live data" di dashboard harus hijau.
+2. Biarkan berjalan minimal 83 menit untuk 1.000 baris (kartu **Dataset** menghitungnya).
+3. Klik **Download CSV (device)**. File ini yang dilampirkan di laporan.
+
+### Data berlabel untuk ML
+Pilih label di kartu **Condition label** sebelum merekam tiap jenis air. Setiap baris baru disimpan dengan label itu.
+
+| Label | Cara membuat air | Lama rekam |
+|---|---|---|
+| `clear` | air keran bersih | 10–15 menit |
+| `slightly_turbid` | beberapa tetes susu atau sedikit tanah | 10–15 menit |
+| `dirty` | lebih banyak susu/tanah + sejumput garam | 10–15 menit |
+
+Tips: ulangi tiap kondisi 2–3 kali di waktu berbeda supaya model tidak hanya menghafal satu sesi.
+Matikan pompa saat merekam (baris saat pompa jalan otomatis dibuang).
+
+## 4. Machine learning
+
+```bash
+cd ml
+pip install -r requirements.txt
+python train_classifier.py --csv aquaguard_dataset_2026-11-01.csv
+python anomaly_detection.py --csv aquaguard_dataset_2026-11-01.csv
+python predict_live.py            # server harus jalan; hasil tampil di kartu "AI prediction"
+```
+
+**train_classifier.py** membandingkan Decision Tree, k-NN, Logistic Regression, dan Random Forest dengan
+fitur TDS dan turbidity. Data dibagi per label berdasarkan waktu (awal untuk latih, akhir untuk uji) supaya
+pembacaan yang hampir sama tidak bocor ke data uji. Hasil di `ml/results/`:
+`metrics.md` (tabel akurasi dan F1, siap ditempel ke laporan), `confusion_matrix.png`,
+`feature_importance.png`, `decision_tree_rules.txt`. Model terbaik disimpan di `ml/models/`.
+
+**anomaly_detection.py** menandai nilai di luar rentang, sensor yang nyangkut (nilai sama persis 2 menit),
+lonjakan mendadak, dan pembacaan aneh menurut Isolation Forest. Hasil: `results/anomalies.csv` dan `anomalies.png`.
+
+## 5. Deploy dashboard ke server (Docker)
+
+Mengikuti pola repo `stevenlie` dan `serverh1`: GitHub Actions di runner `shin` membangun image,
+push ke Harbor, lalu `docker compose up` di server. Nginx + SSL dibuat lewat repo `ansible-infrastructure`.
+
+File yang dipakai: `Dockerfile`, `docker-compose.yml`, `.github/workflows/deploy.yml`.
+Container berjalan di port **7575**, database tersimpan di volume Docker `aquaguard_data`.
+
+### Langkah sekali saja
+1. Buat repo GitHub baru **`StevenLie14/aquaguard`** (boleh private) dan push isi folder ini (branch `main`).
+2. Di `ansible-infrastructure/.env`: set `GITHUB_REPO_URL=https://github.com/StevenLie14/aquaguard`, lalu jalankan
+   `--tags runner` (daftarkan runner `shin` ke repo ini) dan `--tags secret` (REGISTRY_* dan VAULT_*).
+3. Di Vault, di path `VAULT_PATH` untuk repo ini, simpan `DASHBOARD_PASSWORD` (wajib) dan opsional
+   `DASHBOARD_USER`, `MQTT_URL`, `TOPIC_BASE`.
+4. Buat DNS A record, misalnya `aquaguard.stevenlie.my.id`, ke IP server.
+5. Di `ansible-infrastructure/inventory/host_vars/nginx.yml`: `domain_name: "aquaguard.stevenlie.my.id"`,
+   `frontend_port: 7575`, `has_backend: false`, lalu jalankan `--tags nginx`.
+
+Setelah itu setiap push ke `main` otomatis build dan deploy. Buka `https://aquaguard.stevenlie.my.id`
+dan login dengan `DASHBOARD_USER` (bawaan `admin`) dan `DASHBOARD_PASSWORD`.
+
+Prediksi live dari laptop ke server online:
+`python predict_live.py --server https://aquaguard.stevenlie.my.id --user admin --password <password>`
+
+### Jalankan dengan Docker di komputer sendiri
+```bash
+cp .env.example .env      # isi DASHBOARD_PASSWORD
+docker compose up -d --build
+```
+Buka http://localhost:7575.
+
+**Tanpa `DASHBOARD_PASSWORD`, dashboard tidak punya login dan siapa pun bisa menyalakan pompa.**
+Selalu isi password kalau dashboard bisa diakses dari internet.
+
+## Status pengujian
+
+- Server, dashboard, simulator, dan aturan otomatis (di simulator) sudah diuji jalan.
+- Skrip ML sudah diuji dengan data sintetis untuk memastikan berjalan. Angka akurasi untuk laporan harus dari data asli Anda.
+- Image Docker sudah diuji jalan (login, data tetap ada setelah restart, health check).
+- Firmware **belum di-compile**; compile dan uji di Arduino IDE Anda.
