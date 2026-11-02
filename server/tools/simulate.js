@@ -20,7 +20,7 @@ const lin = (v, g, b) => 100 * (1 - Math.min(Math.max((v - g) / (b - g), 0), 1))
 function score(turbIdx) {
   const sT = lin(tds, TDS_GOOD, TDS_BAD), sU = 100 - turbIdx;
   const sC = temp >= 24 && temp <= 30 ? 100 : temp < 24 ? lin(temp, 24, 20) : lin(temp, 30, 34);
-  return Math.round((0.4 * sT + 0.3 * sU + 0.1 * sC) / 0.8);
+  return Math.round(0.5 * sT + 0.375 * sU + 0.125 * sC);
 }
 
 function startChange(why) {
@@ -69,6 +69,6 @@ setInterval(() => {
     startChange('auto R1');
   }
   pub('data', { ts: ts(), src: 'sim', t_tank: +temp.toFixed(2), tds: +tds.toFixed(1), tds_v: +(tds / 400).toFixed(3),
-    turb: +turbIdx.toFixed(1), turb_v: +turbV.toFixed(3), ph: null, ph_v: null,
+    turb: +turbIdx.toFixed(1), turb_v: +turbV.toFixed(3),
     f_top: level >= 1 ? 1 : 0, f_bot: level <= LOW_LEVEL ? 1 : 0, score: s, state, drain, fill, feeder: 0, buzzer: 0, auto, demo });
 }, INTERVAL);

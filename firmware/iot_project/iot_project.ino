@@ -32,7 +32,6 @@ int tempCount = 0;
 float tTank = NAN;
 float tdsV = 0, tdsPpm = 0;
 float turbV = 0, turbIdx = 0;
-float phV = 0, phVal = NAN;
 int   score = 100;
 int   mlClass = -1;      // on-device water-condition prediction (-1 = no model)
 
@@ -124,21 +123,15 @@ float lin(float v, float good, float bad) {   // 100 at good, 0 at bad, linear b
 // ---------------- Score ----------------
 int computeScore() {
   float wSum = 0, sum = 0;
-  // TDS (0.4)
-  sum += 0.4f * lin(tdsPpm, TDS_GOOD, TDS_BAD); wSum += 0.4f;
-  // Turbidity (0.3): index 0 = as clear as calibration, 100 = TURB_V_SPAN darker
-  sum += 0.3f * (100.0f - turbIdx); wSum += 0.3f;
-  // pH (0.2), only if fitted
-  if (USE_PH && !isnan(phVal)) {
-    float s = (phVal >= 6.5f && phVal <= 7.5f) ? 100.0f
-            : (phVal < 6.5f ? lin(phVal, 6.5f, 5.5f) : lin(phVal, 7.5f, 8.5f));
-    sum += 0.2f * s; wSum += 0.2f;
-  }
-  // Temperature (0.1)
+  // TDS (0.5)
+  sum += 0.5f * lin(tdsPpm, TDS_GOOD, TDS_BAD); wSum += 0.5f;
+  // Turbidity (0.375): index 0 = as clear as calibration, 100 = TURB_V_SPAN darker
+  sum += 0.375f * (100.0f - turbIdx); wSum += 0.375f;
+  // Temperature (0.125), left out if the DS18B20 gives no reading
   if (!isnan(tTank)) {
     float s = (tTank >= 24 && tTank <= 30) ? 100.0f
             : (tTank < 24 ? lin(tTank, 24, 20) : lin(tTank, 30, 34));
-    sum += 0.1f * s; wSum += 0.1f;
+    sum += 0.125f * s; wSum += 0.125f;
   }
   return (int)roundf(sum / wSum);
 }
@@ -276,8 +269,6 @@ void publishData() {
   doc["tds_v"] = roundf(tdsV * 1000) / 1000;
   doc["turb"] = roundf(turbIdx * 10) / 10;
   doc["turb_v"] = roundf(turbV * 1000) / 1000;
-  if (USE_PH && !isnan(phVal)) { doc["ph"] = roundf(phVal * 100) / 100; doc["ph_v"] = roundf(phV * 1000) / 1000; }
-  else { doc["ph"] = nullptr; doc["ph_v"] = nullptr; }
   doc["f_top"] = floatTop() ? 1 : 0;
   doc["f_bot"] = floatBot() ? 1 : 0;
   doc["score"] = score;
@@ -333,7 +324,7 @@ void drawOled() {
 // ---------------- Sensor cycle (non-blocking) ----------------
 // 0 s TDS power on + start temperature conversion
 // 1 s read temperatures and TDS, TDS power off
-// 1.5 s read turbidity (and pH), compute score, run rules
+// 1.5 s read turbidity, compute score, run rules
 // 2 s publish
 void sensorCycle() {
   uint32_t t = millis() - cycleStart;
@@ -356,7 +347,6 @@ void sensorCycle() {
       turbV = readVoltsMedian(ADS_CH_TURB) * DIVIDER_RATIO;
       turbIdx = (TURB_V_CLEAR - turbV) / TURB_V_SPAN * 100.0f;
       if (turbIdx < 0) turbIdx = 0; if (turbIdx > 100) turbIdx = 100;
-      if (USE_PH) { phV = readVoltsMedian(ADS_CH_PH) * DIVIDER_RATIO; phVal = PH_SLOPE * phV + PH_OFFSET; }
       mlClass = classifyWaterFromReadings(tdsPpm, tdsV, turbIdx, turbV, isnan(tTank) ? 25.0f : tTank);
     }
     score = computeScore();

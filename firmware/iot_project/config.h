@@ -25,22 +25,18 @@
 #define ADS_ADDR  0x48
 #define ADS_CH_TDS   0
 #define ADS_CH_TURB  1
-#define ADS_CH_PH    2
 
 // ---------- Parts that are fitted ----------
-#define USE_PH      false   // pH probe not fitted
 #define USE_FLOATS  true    // top float = tank full, bottom float = tank low
 #define RELAY_ACTIVE_LOW true
 
 // ---------- Calibration (CAL) ----------
-#define DIVIDER_RATIO      1.5f     // 10k / 20k divider on turbidity and pH
+#define DIVIDER_RATIO      1.5f     // 10k / 20k divider on the turbidity output
 #define TURB_V_CLEAR       3.87f    // (CAL) turbidity sensor voltage in clean water
 #define TURB_V_SPAN        1.5f     // volts darker than clear = index 100
 #define TDS_K              1.00f    // (CAL) TDS pen ppm / firmware ppm
 #define TDS_GOOD           300.0f   // (CAL) refill-water ppm + 100
 #define TDS_BAD            700.0f   // (CAL) refill-water ppm + 400
-#define PH_SLOPE          -4.863f   // (CAL) only if USE_PH
-#define PH_OFFSET         19.075f
 #define FLOAT_TOP_TRIGGERED_LEVEL LOW
 #define FLOAT_BOT_TRIGGERED_LEVEL HIGH
 
