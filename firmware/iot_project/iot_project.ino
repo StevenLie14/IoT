@@ -42,8 +42,6 @@ const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling"};
 State state = IDLE;
 bool autoMode = true, demoMode = false;
 int lowCount = 0;
-int changePct = 0;
-float targetMl = 0, drainedMl = 0;
 uint32_t stateSince = 0, cooldownUntil = 0;
 
 // Manual test run (commands "drain N" / "fill N")
@@ -99,7 +97,7 @@ void beep(int n) { beepsLeft = n; beepPhase = false; beepNext = millis(); }
 
 void enterState(State s, const String& detail) {
   state = s; stateSince = millis();
-  publishEvent("state", STATE_NAMES[s], changePct, detail);
+  publishEvent("state", STATE_NAMES[s], 0, detail);
 }
 
 bool floatTop() { return USE_FLOATS && digitalRead(PIN_FLOAT_TOP) == FLOAT_TOP_TRIGGERED_LEVEL; }
@@ -149,9 +147,6 @@ int computeScore() {
 void startChange(const char* reason) {
   if (state != IDLE) { Serial.println("Change already running"); return; }
   manualDrain = manualFill = false;
-  changePct = CHANGE_PCT;
-  targetMl = TANK_WATER_ML * CHANGE_PCT / 100.0f;
-  drainedMl = 0;
   enterState(DRAINING, reason);
   if (floatBot()) { enterState(SETTLING, "tank already low"); return; }
   setDrain(true, reason);
@@ -165,8 +160,8 @@ void stopAll(const char* why) {
 
 void finishChange(const char* why) {
   setFill(false, why);
-  cooldownUntil = millis() + cooldownMs();                                                     // R3
-  enterState(IDLE, String("change done ") + CHANGE_PCT + "%");
+  cooldownUntil = millis() + cooldownMs();   // R3
+  enterState(IDLE, "change done");
   lowCount = 0;
 }
 
@@ -178,11 +173,10 @@ void runStateMachine() {
   if (manualFill && ((int32_t)(now - manualUntil) >= 0 || floatTop())) { setFill(false, "manual end"); manualFill = false; }
 
   switch (state) {
-    case DRAINING:                                                                             // R1
-      drainedMl = (now - stateSince) / 1000.0f * DRAIN_ML_PER_SEC;
-      if (drainedMl >= targetMl || floatBot()) {
-        setDrain(false, floatBot() ? "bottom float" : "target reached");
-        enterState(SETTLING, String("drained ") + String(drainedMl, 0) + " ml");
+    case DRAINING:   // R2: bottom float ends draining
+      if (floatBot()) {
+        setDrain(false, "bottom float");
+        enterState(SETTLING, "bottom float reached");
       }
       break;
     case SETTLING:
@@ -192,7 +186,7 @@ void runStateMachine() {
         else setFill(true, "refill");
       }
       break;
-    case FILLING:                                                                              // R2
+    case FILLING:    // R3: top float ends the refill
       if (floatTop()) finishChange("top float");
       break;
     default: break;
@@ -284,8 +278,6 @@ void publishData() {
   doc["turb_v"] = roundf(turbV * 1000) / 1000;
   if (USE_PH && !isnan(phVal)) { doc["ph"] = roundf(phVal * 100) / 100; doc["ph_v"] = roundf(phV * 1000) / 1000; }
   else { doc["ph"] = nullptr; doc["ph_v"] = nullptr; }
-  doc["flow"] = drainOn ? DRAIN_ML_PER_SEC * 60.0f / 1000.0f : 0;
-  doc["vol_ml"] = roundf(drainedMl);
   doc["f_top"] = floatTop() ? 1 : 0;
   doc["f_bot"] = floatBot() ? 1 : 0;
   doc["score"] = score;
@@ -332,7 +324,7 @@ void drawOled() {
   oled.setCursor(0, 34); oled.printf("TDS  %.0f ppm", tdsPpm);
   oled.setCursor(0, 44); oled.printf("Turb %.2fV (%.0f)", turbV, turbIdx);
   oled.setCursor(0, 54);
-  if (state == DRAINING) oled.printf("drain %.0f/%.0f ml", drainedMl, targetMl);
+  if (state == DRAINING) oled.print("drain to bottom float");
   else if (state == FILLING) oled.print("fill to top float");
   else oled.printf("drain %s fill %s", drainOn ? "ON" : "-", fillOn ? "ON" : "-");
   oled.display();

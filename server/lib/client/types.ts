@@ -8,8 +8,8 @@ export type Reading = {
   tds_v: number | null;
   turb: number | null;
   turb_v: number | null;
-  flow: number | null;
-  vol_ml: number | null;
+  f_top: number | null;
+  f_bot: number | null;
   score: number | null;
   state: string | null;
   drain: number | null;

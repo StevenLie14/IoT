@@ -171,7 +171,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
           <div className="row">
             <button className={`btn ${isPending('change') ? 'is-pending' : ''}`} disabled={disabled || !!pending || changeRunning}
               onClick={() => request(changeRequest)}>
-              Start water change (20%)
+              Start water change
             </button>
             <button className={`btn danger ${isPending('stop') ? 'is-pending' : ''}`} disabled={disabled}
               onClick={() => request(stopRequest)}>

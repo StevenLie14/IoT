@@ -835,13 +835,14 @@
       "y": 660,
       "width": 420,
       "height": 18,
-      "text": "5 V pumps, 15.8 ml/s, flyback diode each",
+      "text": "5 V pumps, flyback diode each",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#64748b",
-      "roughness": 0
+      "roughness": 0,
+      "originalText": "5 V pumps, flyback diode each"
     },
     {
       "type": "text",
@@ -925,14 +926,14 @@
       "y": 743,
       "width": 380,
       "height": 18,
-      "text": "R1  score < 60 \u00d73 \u2192 beep, drain 20 %",
+      "text": "R1  score < 60 \u00d73 \u2192 beep, drain",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#374151",
       "roughness": 0,
-      "originalText": "R1  score < 60 \u00d73 \u2192 beep, drain 20 %"
+      "originalText": "R1  score < 60 \u00d73 \u2192 beep, drain"
     },
     {
       "type": "text",
@@ -941,14 +942,14 @@
       "y": 793,
       "width": 380,
       "height": 18,
-      "text": "R2  refill until the top float",
+      "text": "R2  bottom float \u2192 refill to top",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#374151",
       "roughness": 0,
-      "originalText": "R2  refill until the top float"
+      "originalText": "R2  bottom float \u2192 refill to top"
     },
     {
       "type": "text",
@@ -957,14 +958,14 @@
       "y": 843,
       "width": 380,
       "height": 18,
-      "text": "R3  30 min cooldown between changes",
+      "text": "R3  top float \u2192 30 min cooldown",
       "fontSize": 14,
       "fontFamily": 3,
       "textAlign": "left",
       "verticalAlign": "top",
       "strokeColor": "#374151",
       "roughness": 0,
-      "originalText": "R3  30 min cooldown between changes"
+      "originalText": "R3  top float \u2192 30 min cooldown"
     },
     {
       "type": "ellipse",

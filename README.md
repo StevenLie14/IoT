@@ -24,8 +24,8 @@ iot/
 
 | Persyaratan | Di kode |
 |---|---|
-| ESP32, minimal 3 sensor | DS18B20 (suhu), TDS, turbidity, float switch atas dan bawah (+ volume buang perkiraan) |
-| Minimal 2 aktuator, rule-based | Pompa buang dan pompa isi (relay), buzzer, dan OLED. Aturan R1 (skor < 60 tiga kali → buzzer 3 beep, buang 20% atau sampai float bawah), R2 (isi sampai float atas), R3 (cooldown 30 menit) |
+| ESP32, minimal 3 sensor | DS18B20 (suhu), TDS, turbidity, float switch atas dan bawah |
+| Minimal 2 aktuator, rule-based | Pompa buang dan pompa isi (relay), buzzer, dan OLED. Aturan R1 (skor < 60 tiga kali → buzzer 3 beep, pompa buang nyala), R2 (float bawah → berhenti buang, isi sampai float atas), R3 (float atas → selesai, cooldown 30 menit) |
 | MQTT | `TOPIC_BASE/data` tiap 5 detik, `/event`, `/cmd`, `/status` |
 | Penyimpanan terus-menerus | PostgreSQL: tabel `readings` dan `events` |
 | Dashboard | Nilai live, status aktuator, grafik riwayat, tombol kontrol, log event. Ada juga dashboard Node-RED di `nodered/` |
@@ -42,8 +42,8 @@ PubSubClient (Nick O'Leary), ArduinoJson (Benoit Blanchon, versi 7).
 **Langkah:**
 1. Buka `firmware/iot_project/iot_project.ino` (folder `iot_project` harus berisi `iot_project.ino` dan `config.h`).
 2. Di `config.h` isi `WIFI_SSID`, `WIFI_PASS`. `TOPIC_BASE` boleh dibiarkan, asal sama dengan server.
-3. Cek nilai kalibrasi: `TURB_V_CLEAR` (tegangan turbidity di air bening), `DRAIN_ML_PER_SEC` (15,8 dari tes Anda),
-   `TANK_WATER_ML` (volume air di bak). Pompa isi berhenti di float atas, jadi tidak perlu kalibrasi.
+3. Cek nilai kalibrasi `TURB_V_CLEAR` (tegangan turbidity di air bening). Pompa berhenti di float, jadi tidak ada kalibrasi volume.
+   Banyaknya air yang diganti ditentukan oleh jarak float atas ke float bawah.
 4. Upload, buka Serial Monitor 115200, akhir baris **Newline**.
 
 **Pin** (sama dengan sketch tes terakhir): OLED/ADS1115 SDA D21, SCL D22 · DS18B20 D4 · daya TDS D13 ·
@@ -89,7 +89,7 @@ Kalau Wi-Fi kampus memblokir MQTT (port 1883), pakai hotspot HP untuk ESP32 dan 
 
 ## 2b. Dashboard Node-RED
 
-Flow di `nodered/flows.json` subscribe ke `TOPIC_BASE/data` dan `/status` di broker.hivemq.com, lalu menampilkan gauge (skor, TDS, turbidity, suhu), status pompa, grafik 1 jam terakhir, dan tombol perintah (ganti air 20%, stop, tes buzzer, mode auto) yang dikirim ke `TOPIC_BASE/cmd`. Firmware tidak perlu diubah, dan bisa jalan bersamaan dengan dashboard Next.js.
+Flow di `nodered/flows.json` subscribe ke `TOPIC_BASE/data` dan `/status` di broker.hivemq.com, lalu menampilkan gauge (skor, TDS, turbidity, suhu), status pompa, grafik 1 jam terakhir, dan tombol perintah (ganti air, stop, tes buzzer, mode auto) yang dikirim ke `TOPIC_BASE/cmd`. Firmware tidak perlu diubah, dan bisa jalan bersamaan dengan dashboard Next.js.
 
 Butuh Node.js 18 atau lebih baru:
 

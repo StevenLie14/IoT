@@ -15,7 +15,7 @@ export default function HealthPanel({ reading, lastChange }: Props) {
   if (reading) autoText = reading.auto ? (reading.demo ? 'On, demo timing' : 'On') : 'Off';
 
   let lastChangeText = '--';
-  if (lastChange) lastChangeText = `${String(lastChange.detail).replace('change done ', '')} at ${formatTime(lastChange.epoch)}`;
+  if (lastChange) lastChangeText = formatTime(lastChange.epoch);
 
   return (
     <div className={`panel score ${hasScore ? scoreLevel(score) : ''}`}>

@@ -11,9 +11,16 @@ type Props = {
 };
 
 function pumpText(reading: Reading | null) {
-  if (reading?.drain) return `draining ${formatNumber(reading.flow, 2)} L/min`;
-  if (reading?.fill) return 'refilling';
-  return 'pump idle';
+  if (reading?.drain) return 'draining to the bottom float';
+  if (reading?.fill) return 'refilling to the top float';
+  return 'pumps idle';
+}
+
+function levelText(reading: Reading | null) {
+  if (!reading) return '--';
+  if (reading.f_top) return 'full';
+  if (reading.f_bot) return 'low';
+  return 'normal';
 }
 
 function predictionText(prediction: Prediction) {
@@ -63,13 +70,11 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
       </div>
 
       <div className="reading">
-        <span className="label">Drained this change</span>
+        <span className="label">Water level</span>
         <div className="value">
-          <span className="num">{formatNumber(reading?.vol_ml, 0)}</span>
-          <span className="unit">ml</span>
+          <span className="word">{levelText(reading)}</span>
         </div>
         <span className="sub">{pumpText(reading)}</span>
-        <Sparkline values={recent.map((row) => row.vol_ml)} />
       </div>
 
       <div className={`reading model ${prediction?.prediction ?? ''}`}>
