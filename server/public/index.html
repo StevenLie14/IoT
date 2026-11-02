@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AquaGuard Dashboard</title>
+<script src="/vendor/chart.umd.js"></script>
+<style>
+  :root { --bg:#f4f7fb; --card:#fff; --ink:#1d2b3a; --muted:#6b7c8f; --line:#dde5ee;
+          --good:#2e9e5b; --warn:#e3a008; --bad:#d64545; --accent:#2563eb; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:14px 20px; background:#1f3b57; color:#fff; }
+  header h1 { margin:0; font-size:20px; }
+  .dots { display:flex; gap:14px; font-size:13px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:#888; margin-right:5px; vertical-align:middle; }
+  .on { background:#3ddc84; } .off { background:#ff6b6b; }
+  main { padding:16px 20px; max-width:1300px; margin:0 auto; display:grid; gap:14px; }
+  .grid { display:grid; gap:14px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; }
+  .card h3 { margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  .val { font-size:28px; font-weight:700; }
+  .unit { font-size:13px; color:var(--muted); margin-left:3px; font-weight:400; }
+  .sub { font-size:12px; color:var(--muted); margin-top:4px; }
+  .score { font-size:44px; }
+  .pill { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; background:#eef2f7; margin:2px 4px 2px 0; }
+  .pill.active { background:#dcfce7; color:#166534; } .pill.fault { background:#fee2e2; color:#991b1b; }
+  .two { display:grid; gap:14px; grid-template-columns: 2fr 1fr; }
+  @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+  button, select { font: inherit; padding:7px 12px; border-radius:7px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.danger { background:var(--bad); color:#fff; border-color:var(--bad); }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0; }
+  .charts { display:grid; gap:14px; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+  .chartbox { position:relative; height:240px; }
+  #log { max-height:280px; overflow:auto; font-size:12.5px; }
+  #log div { padding:4px 0; border-bottom:1px solid var(--line); }
+  #log b { color:var(--accent); }
+  a { color:var(--accent); }
+  .muted { color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AquaGuard AIoT</h1>
+  <div class="dots">
+    <span><span id="dMqtt" class="dot"></span>Server MQTT</span>
+    <span><span id="dDev" class="dot"></span>ESP32</span>
+    <span><span id="dData" class="dot"></span>Live data</span>
+  </div>
+</header>
+<main>
+  <div class="grid">
+    <div class="card"><h3>Health score</h3><div class="val score" id="score">--</div><div class="sub" id="state">state: --</div></div>
+    <div class="card"><h3>Temperature</h3><div class="val"><span id="temp">--</span><span class="unit">°C</span></div><div class="sub" id="tres"></div></div>
+    <div class="card"><h3>TDS</h3><div class="val"><span id="tds">--</span><span class="unit">ppm</span></div><div class="sub" id="tdsv"></div></div>
+    <div class="card"><h3>Turbidity</h3><div class="val"><span id="turb">--</span><span class="unit">index</span></div><div class="sub" id="turbv"></div></div>
+    <div class="card"><h3>Drained volume</h3><div class="val"><span id="vol">--</span><span class="unit">ml</span></div><div class="sub" id="flow"></div></div>
+    <div class="card"><h3>AI prediction</h3><div class="val" id="ml" style="font-size:22px">--</div><div class="sub" id="mlsub">run ml/predict_live.py</div></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h3>Actuators and mode</h3>
+      <div id="act"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" onclick="cmd({cmd:'change',pct:10})">Change 10%</button>
+        <button class="primary" onclick="cmd({cmd:'change',pct:20})">Change 20%</button>
+        <button class="primary" onclick="cmd({cmd:'change',pct:30})">Change 30%</button>
+        <button class="danger" onclick="cmd({cmd:'stop'})">Stop</button>
+        <button onclick="cmd({cmd:'reset'})">Reset fault</button>
+        <button onclick="cmd({cmd:'beep'})">Beep</button>
+      </div>
+      <div class="row">
+        <button id="bAuto" onclick="cmd({cmd:'auto',on:!(last&&last.auto)})">Auto: --</button>
+        <button id="bDemo" onclick="cmd({cmd:'demo',on:!(last&&last.demo)})">Demo: --</button>
+        <button onclick="cmd({cmd:'drain',sec:3})">Test drain 3 s</button>
+        <button onclick="cmd({cmd:'fill',sec:3})">Test fill 3 s</button>
+      </div>
+      <div class="sub" id="fault"></div>
+    </div>
+    <div class="card">
+      <h3>Dataset</h3>
+      <div class="val" style="font-size:24px"><span id="nrec">--</span><span class="unit">records</span></div>
+      <div class="sub" id="nsplit"></div>
+      <div class="row" style="margin-top:10px">
+        <a href="/api/export.csv?source=device">Download CSV (device)</a> ·
+        <a href="/api/export.csv">all</a> ·
+        <a href="/api/events.csv">events</a>
+      </div>
+      <h3 style="margin-top:14px">Condition label (for ML)</h3>
+      <div class="row">
+        <select id="label" onchange="setLabel(this.value)">
+          <option value="">(none)</option>
+          <option value="clear">clear</option>
+          <option value="slightly_turbid">slightly_turbid</option>
+          <option value="dirty">dirty</option>
+        </select>
+      </div>
+      <div class="muted">Every new reading is saved with this label. Set it to match the water you are testing.</div>
+      <div class="sub" id="labelcount"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">History</h3>
+      <select id="range" onchange="loadHistory()">
+        <option value="10">10 min</option><option value="30" selected>30 min</option><option value="120">2 h</option>
+        <option value="720">12 h</option><option value="1440">24 h</option><option value="10080">7 days</option>
+      </select>
+    </div>
+    <div class="charts">
+      <div class="chartbox"><canvas id="cScore"></canvas></div>
+      <div class="chartbox"><canvas id="cTurb"></canvas></div>
+      <div class="chartbox"><canvas id="cTemp"></canvas></div>
+      <div class="chartbox"><canvas id="cPump"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card"><h3>Event log</h3><div id="log"></div></div>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
