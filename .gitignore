@@ -6,3 +6,6 @@ ml/models/
 ml/results/
 __pycache__/
 *.csv
+.next/
+next-env.d.ts
+*.tsbuildinfo

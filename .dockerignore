@@ -1,8 +1,8 @@
 .git
 .github
 **/node_modules
-**/*.db
-**/*.db-*
+**/.next
+**/*.tsbuildinfo
 firmware
 ml
 .env
