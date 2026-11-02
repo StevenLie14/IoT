@@ -1,11 +1,11 @@
-"""Live prediction: read the newest reading from the AquaGuard server every 5 s, classify the
+"""Live prediction: read the newest reading from the IoT Project server every 5 s, classify the
 water condition with the trained model, and send the result back so the dashboard shows it
 in the "AI prediction" card.
 
 Usage:
     python predict_live.py                       # server at http://localhost:3000
     python predict_live.py --server http://localhost:3000 --model models/water_condition_model.joblib
-    python predict_live.py --server https://aquaguard.example.com --user admin --password secret
+    python predict_live.py --server https://iot.stevenlie.site --user admin --password secret
 
 When the server has DASHBOARD_PASSWORD set, pass --user/--password (or set the
 DASHBOARD_USER / DASHBOARD_PASSWORD environment variables).

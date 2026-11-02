@@ -21,5 +21,5 @@ export async function GET(request: Request) {
   }
 
   const date = new Date().toISOString().slice(0, 10);
-  return csvResponse(lines, `aquaguard_dataset_${date}.csv`);
+  return csvResponse(lines, `iot_project_dataset_${date}.csv`);
 }

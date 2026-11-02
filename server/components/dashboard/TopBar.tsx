@@ -45,7 +45,7 @@ export default function TopBar({ health, reading, lastReadingAt, canSignOut, the
   return (
     <header className="topbar">
       <div className="brand">
-        AquaGuard <small>Tank 01</small>
+        IoT Project <small>Tank 01</small>
       </div>
 
       <div className="conn" aria-label="Connection status">

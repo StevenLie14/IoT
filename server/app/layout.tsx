@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AquaGuard',
+  title: 'IoT Project',
   description: 'Aquarium water-quality monitoring and automatic water change',
 };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 
 const THEME_SCRIPT = `try {
-  var theme = localStorage.getItem('aquaguard-theme');
+  var theme = localStorage.getItem('iot-project-theme');
   if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
 } catch (e) {}`;
 

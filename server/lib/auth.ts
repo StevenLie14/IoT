@@ -4,10 +4,10 @@ import { cookies } from 'next/headers';
 const USERNAME = process.env.DASHBOARD_USER || 'admin';
 const PASSWORD = process.env.DASHBOARD_PASSWORD || '';
 
-export const SESSION_COOKIE = 'aquaguard_session';
+export const SESSION_COOKIE = 'iot_project_session';
 export const SESSION_DAYS = 7;
 
-const sessionKey = crypto.createHash('sha256').update(`aquaguard-session:${USERNAME}:${PASSWORD}`).digest();
+const sessionKey = crypto.createHash('sha256').update(`iot-project-session:${USERNAME}:${PASSWORD}`).digest();
 
 export function authEnabled() {
   return PASSWORD !== '';
@@ -71,9 +71,9 @@ type Attempts = { count: number; since: number };
 
 const MAX_ATTEMPTS = 10;
 const LOCK_WINDOW_MS = 15 * 60 * 1000;
-const globalForAuth = globalThis as unknown as { aquaguardAttempts?: Map<string, Attempts> };
-const failedAttempts = globalForAuth.aquaguardAttempts ?? new Map<string, Attempts>();
-globalForAuth.aquaguardAttempts = failedAttempts;
+const globalForAuth = globalThis as unknown as { iotProjectAttempts?: Map<string, Attempts> };
+const failedAttempts = globalForAuth.iotProjectAttempts ?? new Map<string, Attempts>();
+globalForAuth.iotProjectAttempts = failedAttempts;
 
 function currentAttempts(ip: string) {
   const attempts = failedAttempts.get(ip);

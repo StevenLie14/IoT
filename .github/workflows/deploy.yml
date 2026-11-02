@@ -26,7 +26,7 @@ jobs:
           file: Dockerfile
           push: true
           network: host
-          tags: ${{ secrets.REGISTRY_URL }}/stevenlie14/aquaguard:latest
+          tags: ${{ secrets.REGISTRY_URL }}/stevenlie14/iot-project:latest
 
   deploy:
     runs-on: shin

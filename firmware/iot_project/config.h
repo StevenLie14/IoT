@@ -1,4 +1,4 @@
-// ===== AquaGuard configuration =====
+// ===== IoT Project configuration =====
 // Edit this file only. Values marked (CAL) come from your own calibration.
 #pragma once
 
@@ -8,7 +8,7 @@
 #define MQTT_HOST     "broker.hivemq.com"
 #define MQTT_PORT     1883
 // Use something unique so nobody else on the public broker uses the same topics
-#define TOPIC_BASE    "aquaguard/steven-2802941592"
+#define TOPIC_BASE    "iot-project/steven-2802941592"
 
 // ---------- Pins (ESP32 30-pin on expansion board) ----------
 #define PIN_SDA          21

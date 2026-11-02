@@ -1,4 +1,4 @@
-// AquaGuard AIoT - main firmware (ESP32)
+// IoT Project - main firmware (ESP32)
 // Sensing -> score -> rule-based water change -> MQTT JSON every 5 s.
 // Libraries: Adafruit SSD1306 (+GFX, BusIO), Adafruit ADS1X15, OneWire,
 //            DallasTemperature, PubSubClient, ArduinoJson (7.x)
@@ -297,7 +297,7 @@ void keepConnected() {
   }
   if (!mqtt.connected() && millis() - lastMqttTry > 5000) {
     lastMqttTry = millis();
-    String id = "aquaguard-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+    String id = "iot-project-" + String((uint32_t)ESP.getEfuseMac(), HEX);
     if (mqtt.connect(id.c_str(), topic("status").c_str(), 1, true, "offline")) {
       mqtt.publish(topic("status").c_str(), "online", true);
       mqtt.subscribe(topic("cmd").c_str());
@@ -442,7 +442,7 @@ void setup() {
   oledOk = foundOled && oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR);
   adsOk  = foundAds && ads.begin(ADS_ADDR, &Wire);
   if (adsOk) ads.setGain(GAIN_ONE);
-  if (oledOk) { oled.setTextColor(SSD1306_WHITE); oled.clearDisplay(); oled.setCursor(0, 0); oled.print("AquaGuard"); oled.display(); }
+  if (oledOk) { oled.setTextColor(SSD1306_WHITE); oled.clearDisplay(); oled.setCursor(0, 0); oled.print("IoT Project"); oled.display(); }
 
   temps.begin();
   temps.setWaitForConversion(false);

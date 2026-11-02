@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 export type ThemeChoice = 'system' | 'light' | 'dark';
 
-const STORAGE_KEY = 'aquaguard-theme';
+const STORAGE_KEY = 'iot-project-theme';
 
 function readStoredChoice(): ThemeChoice {
   try {

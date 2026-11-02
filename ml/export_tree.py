@@ -1,10 +1,10 @@
-"""Train a decision tree on the AquaGuard dataset and export it as C code for the ESP32.
+"""Train a decision tree on the IoT Project dataset and export it as C code for the ESP32.
 
-The tree becomes plain if-else statements in firmware/aquaguard/water_model.h, so the
+The tree becomes plain if-else statements in firmware/iot_project/water_model.h, so the
 ESP32 classifies the water itself (no Wi-Fi or laptop needed).
 
 Usage:
-    python export_tree.py --csv aquaguard_dataset.csv
+    python export_tree.py --csv iot_project_dataset.csv
     python export_tree.py --csv data.csv --max-depth 3 --features tds turb
 
 Then upload the firmware again (the header is picked up automatically).
@@ -22,7 +22,7 @@ from train_classifier import LABEL_ORDER, load, time_split
 
 # Dataset column -> firmware argument of classifyWaterFromReadings()
 FIRMWARE_ARGS = ["tds", "tds_v", "turb", "turb_v", "t_tank"]
-DEFAULT_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "firmware", "aquaguard", "water_model.h")
+DEFAULT_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "firmware", "iot_project", "water_model.h")
 
 
 def tree_to_c(clf, features, indent="  "):

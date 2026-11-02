@@ -43,7 +43,7 @@ async function startIngest() {
 
   const client = mqtt.connect(MQTT_URL, {
     reconnectPeriod: 3000,
-    clientId: `aquaguard-server-${Math.random().toString(16).slice(2, 8)}`,
+    clientId: `iot-project-server-${Math.random().toString(16).slice(2, 8)}`,
   });
   store.publish = (topic, payload) => client.publish(topic, payload);
 

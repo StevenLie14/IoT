@@ -1,4 +1,4 @@
-"""Detect sensor anomalies in the AquaGuard dataset.
+"""Detect sensor anomalies in the IoT Project dataset.
 
 Two methods:
   1. Rule checks  - out-of-range values, a sensor stuck at the same value, sudden jumps.
@@ -8,7 +8,7 @@ These match faults seen while building the prototype: turbidity stuck near 0 V w
 wire was loose, unstable readings without a common ground, and pulse noise from the pump.
 
 Usage:
-    python anomaly_detection.py --csv aquaguard_dataset.csv
+    python anomaly_detection.py --csv iot_project_dataset.csv
 Output: results/anomalies.csv, results/anomalies.png, printed summary
 """
 import argparse
@@ -78,7 +78,7 @@ def main():
         ax.plot(x, df[c], lw=0.8, color="#2563eb")
         ax.scatter(x[df["anomaly"]], df.loc[df["anomaly"], c], color="#d64545", s=12, zorder=3, label="anomaly")
         ax.set_ylabel(c)
-    axes[0].legend(loc="upper right"); axes[0].set_title("AquaGuard sensor anomalies")
+    axes[0].legend(loc="upper right"); axes[0].set_title("IoT Project sensor anomalies")
     axes[-1].set_xlabel("time (WIB)")
     fig.tight_layout(); fig.savefig(os.path.join(a.out, "anomalies.png"), dpi=150)
     print(f"Saved {a.out}/anomalies.csv and {a.out}/anomalies.png")

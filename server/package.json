@@ -1,8 +1,8 @@
 {
-  "name": "aquaguard",
+  "name": "iot-project",
   "version": "2.0.0",
   "private": true,
-  "description": "AquaGuard AIoT: Next.js dashboard and API, MQTT ingest, PostgreSQL storage",
+  "description": "IoT Project: Next.js dashboard and API, MQTT ingest, PostgreSQL storage",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",

@@ -15,5 +15,5 @@ export async function GET(request: Request) {
   for (const row of result.rows) {
     lines.push(HEADER.map((column) => escapeCsv(row[column])).join(','));
   }
-  return csvResponse(lines, 'aquaguard_events.csv');
+  return csvResponse(lines, 'iot_project_events.csv');
 }

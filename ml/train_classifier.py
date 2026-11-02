@@ -1,4 +1,4 @@
-"""Train a water-condition classifier (clear / slightly_turbid / dirty) from the AquaGuard dataset.
+"""Train a water-condition classifier (clear / slightly_turbid / dirty) from the IoT Project dataset.
 
 Input : the CSV exported from the dashboard (Download CSV), with a `label` column that you
         set on the dashboard while testing each kind of water.
@@ -7,7 +7,7 @@ Output: models/water_condition_model.joblib  (best model + feature list)
         results/decision_tree_rules.txt
 
 Usage:
-    python train_classifier.py --csv aquaguard_dataset.csv
+    python train_classifier.py --csv iot_project_dataset.csv
     python train_classifier.py --csv data.csv --features tds turb t_tank
 
 Default features are tds and turb. Temperature is left out on purpose: it does not decide how

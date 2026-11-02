@@ -14,10 +14,10 @@ type Store = {
   publish?: (topic: string, payload: string) => void;
 };
 
-const globalForStore = globalThis as unknown as { aquaguardStore?: Store };
+const globalForStore = globalThis as unknown as { iotProjectStore?: Store };
 
-if (!globalForStore.aquaguardStore) {
-  globalForStore.aquaguardStore = {
+if (!globalForStore.iotProjectStore) {
+  globalForStore.iotProjectStore = {
     latest: null,
     latestMl: null,
     deviceStatus: 'unknown',
@@ -29,9 +29,9 @@ if (!globalForStore.aquaguardStore) {
   };
 }
 
-export const store = globalForStore.aquaguardStore;
+export const store = globalForStore.iotProjectStore;
 
-export const TOPIC_BASE = process.env.TOPIC_BASE || 'aquaguard/steven-2802941592';
+export const TOPIC_BASE = process.env.TOPIC_BASE || 'iot-project/steven-2802941592';
 
 export function health() {
   return {

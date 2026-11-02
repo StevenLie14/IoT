@@ -2,16 +2,16 @@ import { Pool, types } from 'pg';
 
 types.setTypeParser(20, (value) => Number(value));
 
-const globalForDb = globalThis as unknown as { aquaguardPool?: Pool };
+const globalForDb = globalThis as unknown as { iotProjectPool?: Pool };
 
-if (!globalForDb.aquaguardPool) {
-  globalForDb.aquaguardPool = process.env.DATABASE_URL
+if (!globalForDb.iotProjectPool) {
+  globalForDb.iotProjectPool = process.env.DATABASE_URL
     ? new Pool({ connectionString: process.env.DATABASE_URL })
     : new Pool();
-  globalForDb.aquaguardPool.on('error', (error) => console.error('PostgreSQL error:', error.message));
+  globalForDb.iotProjectPool.on('error', (error) => console.error('PostgreSQL error:', error.message));
 }
 
-export const pool = globalForDb.aquaguardPool;
+export const pool = globalForDb.iotProjectPool;
 
 export function q<T extends Record<string, any> = Record<string, any>>(sql: string, params: unknown[] = []) {
   return pool.query<T>(sql, params);

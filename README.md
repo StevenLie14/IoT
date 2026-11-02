@@ -1,11 +1,11 @@
-# AquaGuard AIoT: kode lengkap
+# IoT Project: kode lengkap
 
 Paket ini berisi semua kode untuk Assignment 2 dan tahap AI (AOL):
 
 ```
-aquaguard_project/
-├─ firmware/aquaguard/      Firmware ESP32 (sensor, skor, aturan otomatis, MQTT)
-│   ├─ aquaguard.ino
+iot/
+├─ firmware/iot_project/    Firmware ESP32 (sensor, skor, aturan otomatis, MQTT)
+│   ├─ iot_project.ino
 │   └─ config.h             SEMUA pengaturan dan kalibrasi ada di sini
 ├─ server/                  Next.js full-stack (React + API): MQTT -> PostgreSQL, dashboard, ekspor CSV
 │   ├─ app/                 Halaman (dashboard, login) dan API (app/api/*/route.ts)
@@ -39,7 +39,7 @@ PubSubClient (Nick O'Leary), ArduinoJson (Benoit Blanchon, versi 7).
 **Board:** ESP32 Dev Module (core esp32 by Espressif 3.x).
 
 **Langkah:**
-1. Buka `firmware/aquaguard/aquaguard.ino` (folder `aquaguard` harus berisi `aquaguard.ino` dan `config.h`).
+1. Buka `firmware/iot_project/iot_project.ino` (folder `iot_project` harus berisi `iot_project.ino` dan `config.h`).
 2. Di `config.h` isi `WIFI_SSID`, `WIFI_PASS`. `TOPIC_BASE` boleh dibiarkan, asal sama dengan server.
 3. Cek nilai kalibrasi: `TURB_V_CLEAR` (tegangan turbidity di air bening), `DRAIN_ML_PER_SEC` (15,8 dari tes Anda),
    `FILL_ML_PER_SEC` (ukur pompa isi dengan cara yang sama), `TANK_WATER_ML` (volume air di bak).
@@ -70,7 +70,7 @@ Tanpa Docker (butuh Node.js 20.9+ dan PostgreSQL yang sudah terpasang):
 ```bash
 cd server
 npm install
-PGHOST=localhost PGUSER=aquaguard PGPASSWORD=... PGDATABASE=aquaguard npm run dev
+PGHOST=localhost PGUSER=iot_project PGPASSWORD=... PGDATABASE=iot_project npm run dev
 ```
 Lalu buka http://localhost:3000. Tabel dibuat otomatis saat server pertama kali jalan.
 Untuk mode produksi: `npm run build` lalu `npm start`.
@@ -109,8 +109,8 @@ Matikan pompa saat merekam (baris saat pompa jalan otomatis dibuang).
 ```bash
 cd ml
 pip install -r requirements.txt
-python train_classifier.py --csv aquaguard_dataset_2026-11-01.csv
-python anomaly_detection.py --csv aquaguard_dataset_2026-11-01.csv
+python train_classifier.py --csv iot_project_dataset_2026-11-01.csv
+python anomaly_detection.py --csv iot_project_dataset_2026-11-01.csv
 python predict_live.py            # server harus jalan; hasil tampil di kartu "AI prediction"
 ```
 
@@ -125,11 +125,11 @@ Selain lewat laptop, model bisa jalan langsung di ESP32 sehingga tetap bekerja t
 
 ```bash
 cd ml
-python export_tree.py --csv aquaguard_dataset_2026-11-01.csv
+python export_tree.py --csv iot_project_dataset_2026-11-01.csv
 ```
 
 Skrip ini melatih decision tree (fitur TDS dan turbidity, kedalaman maksimal 4), menampilkan akurasi
-di data uji, lalu menulis `firmware/aquaguard/water_model.h` berisi aturan `if-else`. Upload ulang firmware.
+di data uji, lalu menulis `firmware/iot_project/water_model.h` berisi aturan `if-else`. Upload ulang firmware.
 ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY), mengirimnya di kolom `ml` lewat MQTT,
 dan dashboard menampilkannya di kartu "AI prediction". Kolom `ml` juga ikut di CSV.
 
@@ -145,8 +145,8 @@ Mengikuti pola repo `stevenlie` dan `serverh1`: GitHub Actions di runner `shin` 
 push ke Harbor, lalu `docker compose up` di server. Nginx + SSL dibuat lewat repo `ansible-infrastructure`.
 
 File yang dipakai: `Dockerfile`, `docker-compose.yml`, `.github/workflows/deploy.yml`.
-Ada dua container: `aquaguard` (Next.js di Node 26, port **7575**) dan `aquaguard-db` (PostgreSQL 17, tidak dibuka ke luar).
-Data database tersimpan di volume Docker `aquaguard_pg`.
+Ada dua container: `iot-project` (Next.js di Node 26, port **7575**) dan `iot-project-db` (PostgreSQL 17, tidak dibuka ke luar).
+Data database tersimpan di volume Docker `iot_project_pg`.
 
 ### Langkah sekali saja
 1. Kode ada di repo **`StevenLie14/IoT`**. Deploy berjalan saat ada push ke branch `main`.
@@ -154,17 +154,17 @@ Data database tersimpan di volume Docker `aquaguard_pg`.
    `--tags runner` (daftarkan runner `shin` ke repo ini) dan `--tags secret` (REGISTRY_* dan VAULT_*).
 3. Di Vault, di path `VAULT_PATH` untuk repo ini, simpan `DB_PASSWORD` dan `DASHBOARD_PASSWORD` (wajib),
    dan opsional `DB_USER`, `DB_NAME`, `DASHBOARD_USER`, `MQTT_URL`, `TOPIC_BASE`.
-4. Buat DNS A record, misalnya `aquaguard.stevenlie.my.id`, ke IP server.
-5. Di `ansible-infrastructure/inventory/host_vars/nginx.yml`: `domain_name: "aquaguard.stevenlie.my.id"`,
+4. Buat DNS A record, misalnya `iot.stevenlie.site`, ke IP server.
+5. Di `ansible-infrastructure/inventory/host_vars/nginx.yml`: `domain_name: "iot.stevenlie.site"`,
    `frontend_port: 7575`, `has_backend: false`, lalu jalankan `--tags nginx`.
 
-Setelah itu setiap push ke `main` otomatis build dan deploy. Buka `https://aquaguard.stevenlie.my.id`
+Setelah itu setiap push ke `main` otomatis build dan deploy. Buka `https://iot.stevenlie.site`
 dan login dengan `DASHBOARD_USER` (bawaan `admin`) dan `DASHBOARD_PASSWORD`.
 Halaman login muncul otomatis. Sesi berlaku 7 hari, dan mengganti `DASHBOARD_PASSWORD` membuat semua sesi keluar.
 Setelah 10 kali password salah dari satu alamat IP, login dikunci 15 menit.
 
 Prediksi live dari laptop ke server online:
-`python predict_live.py --server https://aquaguard.stevenlie.my.id --user admin --password <password>`
+`python predict_live.py --server https://iot.stevenlie.site --user admin --password <password>`
 
 ### Jalankan dengan Docker di komputer sendiri
 ```bash
