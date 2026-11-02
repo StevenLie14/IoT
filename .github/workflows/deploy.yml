@@ -28,6 +28,15 @@ jobs:
           network: host
           tags: ${{ secrets.REGISTRY_URL }}/stevenlie14/iot-project:latest
 
+      - name: Docker Build And Push Node-RED
+        uses: docker/build-push-action@v6
+        with:
+          context: nodered
+          file: nodered/Dockerfile
+          push: true
+          network: host
+          tags: ${{ secrets.REGISTRY_URL }}/stevenlie14/iot-project-nodered:latest
+
   deploy:
     runs-on: shin
     needs: build

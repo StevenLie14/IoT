@@ -5,4 +5,3 @@ context/
 .flows.json.backup
 flows_cred.json
 settings.js
-package-lock.json

@@ -44,6 +44,22 @@ services:
     networks:
       - iot_project_net
 
+  nodered:
+    pull_policy: always
+    restart: unless-stopped
+    image: ${REGISTRY_URL:-registry.stevenlie.my.id}/stevenlie14/iot-project-nodered:latest
+    build:
+      context: ./nodered
+    container_name: iot-project-nodered
+    ports:
+      - "7576:1880"
+    environment:
+      - PORT=1880
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:?DASHBOARD_PASSWORD is required}
+    networks:
+      - iot_project_net
+
 volumes:
   iot_project_pg:
 

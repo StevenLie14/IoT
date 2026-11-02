@@ -101,6 +101,8 @@ npm start
 
 Buka http://localhost:1880/dashboard untuk dashboard, dan http://localhost:1880 untuk editor flow. Kalau `TOPIC_BASE` di `config.h` diganti, ganti juga topiknya di node `data`, `status` dan `cmd`.
 
+Di server, Node-RED ikut di-deploy sebagai container `iot-project-nodered` (port 7576) oleh workflow yang sama. Versi server memakai `settings.prod.js`: login sama dengan dashboard utama (`DASHBOARD_USER` / `DASHBOARD_PASSWORD`), dan editor flow dimatikan, jadi perubahan flow dibuat di laptop lalu di-push. Untuk domainnya, jalankan role nginx di `ansible-infrastructure` dengan `domain_name` baru (misalnya `iot-nodered.stevenlie.site`) dan `frontend_port: 7576`.
+
 ## 3. Mengumpulkan dataset
 
 1. Jalankan server, nyalakan ESP32. Titik "ESP32" dan "Live data" di dashboard harus hijau.
