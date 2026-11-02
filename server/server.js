@@ -1,70 +1,86 @@
 // AquaGuard AIoT server
-// MQTT subscriber -> SQLite (node:sqlite) -> live dashboard (Server-Sent Events) + CSV export.
-// Run: npm install && npm start   (Node.js 22.13 or newer)
+// MQTT subscriber -> PostgreSQL -> live dashboard (Server-Sent Events) + CSV export.
+// Run: npm install && npm start
 //
-// Environment variables (all optional):
+// Environment variables:
+//   PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE   PostgreSQL connection (or DATABASE_URL)
 //   MQTT_URL    default mqtt://broker.hivemq.com:1883
 //   TOPIC_BASE  default aquaguard/steven-2802941592  (must match firmware config.h)
 //   PORT        default 3000
-//   DB_FILE     default aquaguard.db
 //   DASHBOARD_USER / DASHBOARD_PASSWORD  when the password is set, the whole dashboard and API
 //               require HTTP Basic login (use this when the dashboard is on the internet)
 
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const mqtt = require('mqtt');
-const { DatabaseSync } = require('node:sqlite');
+const { Pool, types } = require('pg');
 
 const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 const TOPIC_BASE = process.env.TOPIC_BASE || 'aquaguard/steven-2802941592';
 const PORT = Number(process.env.PORT || 3000);
-const DB_FILE = process.env.DB_FILE || path.join(__dirname, 'aquaguard.db');
 const DASH_USER = process.env.DASHBOARD_USER || 'admin';
 const DASH_PASS = process.env.DASHBOARD_PASSWORD || '';
 
 // ---------------- Database ----------------
-const db = new DatabaseSync(DB_FILE);
-db.exec(`
-  PRAGMA journal_mode = WAL;
-  CREATE TABLE IF NOT EXISTS readings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    epoch INTEGER NOT NULL,          -- server receive time (unix s)
-    device_ts INTEGER,               -- ESP32 NTP time (0 if not synced)
-    t_tank REAL, t_res REAL, tds REAL, tds_v REAL, turb REAL, turb_v REAL,
-    ph REAL, ph_v REAL, flow REAL, vol_ml REAL, f_top INTEGER, f_bot INTEGER,
-    score INTEGER, state TEXT, drain INTEGER, fill INTEGER, feeder INTEGER,
-    buzzer INTEGER, auto INTEGER, demo INTEGER, fault TEXT,
-    ml TEXT,                         -- prediction made on the ESP32 (decision tree)
-    label TEXT,                      -- condition label set on the dashboard (for ML)
-    source TEXT                      -- 'device' or 'sim'
-  );
-  CREATE TABLE IF NOT EXISTS events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    epoch INTEGER NOT NULL, device_ts INTEGER,
-    type TEXT, name TEXT, value REAL, detail TEXT, source TEXT
-  );
-  CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
-  CREATE INDEX IF NOT EXISTS idx_readings_epoch ON readings(epoch);
-  CREATE INDEX IF NOT EXISTS idx_events_epoch ON events(epoch);
-`);
-
-// Databases created before the on-device model existed get the new column
-if (!db.prepare('PRAGMA table_info(readings)').all().some((c) => c.name === 'ml')) db.exec('ALTER TABLE readings ADD COLUMN ml TEXT');
+types.setTypeParser(20, (v) => Number(v));   // BIGINT and COUNT(*) as numbers, not strings
+const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL }) : new Pool();
+pool.on('error', (e) => console.error('PostgreSQL error:', e.message));
+const q = (sql, params = []) => pool.query(sql, params);
 
 const COLS = ['t_tank', 't_res', 'tds', 'tds_v', 'turb', 'turb_v', 'ph', 'ph_v', 'flow', 'vol_ml', 'f_top', 'f_bot',
   'score', 'state', 'drain', 'fill', 'feeder', 'buzzer', 'auto', 'demo', 'fault', 'ml'];
 const TEXT_COLS = ['state', 'fault', 'ml'];
-const insReading = db.prepare(`INSERT INTO readings (epoch, device_ts, ${COLS.join(',')}, label, source)
-  VALUES (?, ?, ${COLS.map(() => '?').join(',')}, ?, ?)`);
-const insEvent = db.prepare(`INSERT INTO events (epoch, device_ts, type, name, value, detail, source) VALUES (?,?,?,?,?,?,?)`);
-const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
-const setSetting = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
 
-let currentLabel = (getSetting.get('label') || {}).value || '';
+async function initDb() {
+  await q(`
+    CREATE TABLE IF NOT EXISTS readings (
+      id BIGSERIAL PRIMARY KEY,
+      epoch BIGINT NOT NULL,             -- server receive time (unix s)
+      device_ts BIGINT,                  -- ESP32 NTP time (0 if not synced)
+      t_tank DOUBLE PRECISION, t_res DOUBLE PRECISION, tds DOUBLE PRECISION, tds_v DOUBLE PRECISION,
+      turb DOUBLE PRECISION, turb_v DOUBLE PRECISION, ph DOUBLE PRECISION, ph_v DOUBLE PRECISION,
+      flow DOUBLE PRECISION, vol_ml DOUBLE PRECISION, f_top SMALLINT, f_bot SMALLINT,
+      score SMALLINT, state TEXT, drain SMALLINT, fill SMALLINT, feeder SMALLINT,
+      buzzer SMALLINT, auto SMALLINT, demo SMALLINT, fault TEXT,
+      ml TEXT,                           -- prediction made on the ESP32 (decision tree)
+      label TEXT,                        -- condition label set on the dashboard (for ML)
+      source TEXT                        -- 'device' or 'sim'
+    );
+    ALTER TABLE readings ADD COLUMN IF NOT EXISTS ml TEXT;
+    CREATE TABLE IF NOT EXISTS events (
+      id BIGSERIAL PRIMARY KEY,
+      epoch BIGINT NOT NULL, device_ts BIGINT,
+      type TEXT, name TEXT, value DOUBLE PRECISION, detail TEXT, source TEXT
+    );
+    CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
+    CREATE INDEX IF NOT EXISTS idx_readings_epoch ON readings(epoch);
+    CREATE INDEX IF NOT EXISTS idx_events_epoch ON events(epoch);
+  `);
+}
+
+// The database container may still be starting: retry for about a minute
+async function waitForDb() {
+  for (let i = 1; ; i++) {
+    try { await initDb(); return; } catch (e) {
+      if (i >= 30) throw e;
+      console.log(`Waiting for PostgreSQL (${e.message})...`);
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+}
+
+const insReading = `INSERT INTO readings (epoch, device_ts, ${COLS.join(',')}, label, source)
+  VALUES (${Array.from({ length: COLS.length + 4 }, (_, i) => `$${i + 1}`).join(',')}) RETURNING id`;
+const insEvent = 'INSERT INTO events (epoch, device_ts, type, name, value, detail, source) VALUES ($1,$2,$3,$4,$5,$6,$7)';
+const logEvent = (...v) => q(insEvent, v).catch((e) => console.error('Event not saved:', e.message));
+
+let currentLabel = '';
 let latest = null, latestMl = null, deviceStatus = 'unknown', lastDataAt = 0;
 
 const num = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
 const now = () => Math.floor(Date.now() / 1000);
+const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error(e.message); res.status(500).json({ error: 'database error' }); });
 
 // ---------------- Live clients (SSE) ----------------
 const clients = new Set();
@@ -73,40 +89,47 @@ function broadcast(type, data) {
   for (const res of clients) res.write(msg);
 }
 
-// ---------------- MQTT ----------------
-const client = mqtt.connect(MQTT_URL, { reconnectPeriod: 3000, clientId: 'aquaguard-server-' + Math.random().toString(16).slice(2, 8) });
-let mqttUp = false;
-client.on('connect', () => {
-  mqttUp = true;
-  client.subscribe([`${TOPIC_BASE}/data`, `${TOPIC_BASE}/event`, `${TOPIC_BASE}/status`]);
-  console.log(`MQTT connected to ${MQTT_URL}, topics ${TOPIC_BASE}/#`);
-  broadcast('health', health());
-});
-client.on('close', () => { if (mqttUp) { mqttUp = false; broadcast('health', health()); } });
-client.on('error', (e) => console.error('MQTT error:', e.message));
-
-client.on('message', (topic, buf) => {
-  const sub = topic.slice(TOPIC_BASE.length + 1);
-  const text = buf.toString();
-  if (sub === 'status') { deviceStatus = text; broadcast('health', health()); return; }
-  let m;
-  try { m = JSON.parse(text); } catch { return; }
-  const t = now();
-  const source = m.src === 'sim' ? 'sim' : 'device';
-  if (sub === 'data') {
-    const vals = COLS.map((c) => (TEXT_COLS.includes(c) ? (m[c] ?? null) : num(m[c])));
-    const info = insReading.run(t, num(m.ts), ...vals, currentLabel || null, source);
-    latest = { id: Number(info.lastInsertRowid), epoch: t, device_ts: num(m.ts), ...Object.fromEntries(COLS.map((c, i) => [c, vals[i]])), label: currentLabel || null, source };
-    lastDataAt = Date.now();
-    broadcast('reading', latest);
-  } else if (sub === 'event') {
-    insEvent.run(t, num(m.ts), m.type ?? null, m.name ?? null, num(m.value), m.detail ?? null, source);
-    broadcast('event', { epoch: t, type: m.type, name: m.name, value: m.value, detail: m.detail, source });
-  }
-});
-
 function health() {
   return { mqtt: mqttUp, device: deviceStatus, dataFresh: Date.now() - lastDataAt < 15000, label: currentLabel, topic: TOPIC_BASE };
+}
+
+// ---------------- MQTT ----------------
+let client, mqttUp = false;
+function startMqtt() {
+  client = mqtt.connect(MQTT_URL, { reconnectPeriod: 3000, clientId: 'aquaguard-server-' + Math.random().toString(16).slice(2, 8) });
+  client.on('connect', () => {
+    mqttUp = true;
+    client.subscribe([`${TOPIC_BASE}/data`, `${TOPIC_BASE}/event`, `${TOPIC_BASE}/status`]);
+    console.log(`MQTT connected to ${MQTT_URL}, topics ${TOPIC_BASE}/#`);
+    broadcast('health', health());
+  });
+  client.on('close', () => { if (mqttUp) { mqttUp = false; broadcast('health', health()); } });
+  client.on('error', (e) => console.error('MQTT error:', e.message));
+
+  client.on('message', async (topic, buf) => {
+    const sub = topic.slice(TOPIC_BASE.length + 1);
+    const text = buf.toString();
+    if (sub === 'status') { deviceStatus = text; broadcast('health', health()); return; }
+    let m;
+    try { m = JSON.parse(text); } catch { return; }
+    const t = now();
+    const source = m.src === 'sim' ? 'sim' : 'device';
+    try {
+      if (sub === 'data') {
+        const vals = COLS.map((c) => (TEXT_COLS.includes(c) ? (m[c] ?? null) : num(m[c])));
+        const label = currentLabel || null;
+        const { rows } = await q(insReading, [t, num(m.ts), ...vals, label, source]);
+        latest = { id: rows[0].id, epoch: t, device_ts: num(m.ts), ...Object.fromEntries(COLS.map((c, i) => [c, vals[i]])), label, source };
+        lastDataAt = Date.now();
+        broadcast('reading', latest);
+      } else if (sub === 'event') {
+        await q(insEvent, [t, num(m.ts), m.type ?? null, m.name ?? null, num(m.value), m.detail ?? null, source]);
+        broadcast('event', { epoch: t, type: m.type, name: m.name, value: m.value, detail: m.detail, source });
+      }
+    } catch (e) {
+      console.error('Message not saved:', e.message);
+    }
+  });
 }
 
 // ---------------- HTTP ----------------
@@ -117,7 +140,6 @@ app.get('/healthz', (req, res) => res.json({ ok: true, mqtt: mqttUp }));   // us
 
 // Optional login: everyone who can open the dashboard can also run the pumps,
 // so protect it with a password when it is reachable from the internet.
-const crypto = require('crypto');
 const same = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 if (DASH_PASS) {
   app.use((req, res, next) => {
@@ -138,27 +160,29 @@ app.get('/vendor/chart.umd.js', (req, res) => res.sendFile(path.join(__dirname, 
 
 app.get('/api/latest', (req, res) => res.json({ reading: latest, ml: latestMl, health: health() }));
 
-app.get('/api/history', (req, res) => {
+app.get('/api/history', wrap(async (req, res) => {
   const minutes = Math.min(Math.max(Number(req.query.minutes) || 30, 1), 60 * 24 * 30);
   const since = now() - minutes * 60;
-  let rows = db.prepare('SELECT * FROM readings WHERE epoch >= ? ORDER BY epoch').all(since);
   const maxPts = 1500;                       // thin out long ranges for the chart
-  if (rows.length > maxPts) { const step = Math.ceil(rows.length / maxPts); rows = rows.filter((_, i) => i % step === 0); }
+  const { rows: [{ n }] } = await q('SELECT COUNT(*) AS n FROM readings WHERE epoch >= $1', [since]);
+  const step = Math.max(1, Math.ceil(n / maxPts));
+  const { rows } = await q(`SELECT * FROM (SELECT *, ROW_NUMBER() OVER (ORDER BY epoch) AS rn FROM readings WHERE epoch >= $1) t
+    WHERE (rn - 1) % $2 = 0 ORDER BY epoch`, [since, step]);
   res.json(rows);
-});
+}));
 
-app.get('/api/events', (req, res) => {
+app.get('/api/events', wrap(async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 500);
-  res.json(db.prepare('SELECT * FROM events ORDER BY id DESC LIMIT ?').all(limit));
-});
+  res.json((await q('SELECT * FROM events ORDER BY id DESC LIMIT $1', [limit])).rows);
+}));
 
-app.get('/api/stats', (req, res) => {
-  const r = db.prepare(`SELECT COUNT(*) AS n, MIN(epoch) AS first, MAX(epoch) AS last,
-    SUM(source = 'device') AS device, SUM(source = 'sim') AS sim FROM readings`).get();
-  const labels = db.prepare(`SELECT label, COUNT(*) AS n FROM readings WHERE label IS NOT NULL AND source = 'device' GROUP BY label`).all();
-  const ev = db.prepare('SELECT COUNT(*) AS n FROM events').get();
+app.get('/api/stats', wrap(async (req, res) => {
+  const { rows: [r] } = await q(`SELECT COUNT(*) AS n, MIN(epoch) AS first, MAX(epoch) AS last,
+    COUNT(*) FILTER (WHERE source = 'device') AS device, COUNT(*) FILTER (WHERE source = 'sim') AS sim FROM readings`);
+  const { rows: labels } = await q(`SELECT label, COUNT(*) AS n FROM readings WHERE label IS NOT NULL AND source = 'device' GROUP BY label ORDER BY label`);
+  const { rows: [ev] } = await q('SELECT COUNT(*) AS n FROM events');
   res.json({ ...r, events: ev.n, labels });
-});
+}));
 
 app.post('/api/cmd', (req, res) => {
   const { cmd } = req.body || {};
@@ -166,19 +190,19 @@ app.post('/api/cmd', (req, res) => {
   if (!allowed.includes(cmd)) return res.status(400).json({ error: 'unknown cmd' });
   if (!mqttUp) return res.status(503).json({ error: 'MQTT not connected' });
   client.publish(`${TOPIC_BASE}/cmd`, JSON.stringify(req.body));
-  insEvent.run(now(), null, 'command', cmd, num(req.body.pct ?? req.body.sec ?? (req.body.on === undefined ? null : (req.body.on ? 1 : 0))), 'from dashboard', 'server');
+  logEvent(now(), null, 'command', cmd, num(req.body.pct ?? req.body.sec ?? (req.body.on === undefined ? null : (req.body.on ? 1 : 0))), 'from dashboard', 'server');
   res.json({ ok: true });
 });
 
-app.post('/api/label', (req, res) => {
+app.post('/api/label', wrap(async (req, res) => {
   const label = String((req.body || {}).label || '').trim();
   if (label && !/^[a-z_]{1,32}$/.test(label)) return res.status(400).json({ error: 'label must be a-z or _' });
+  await q('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', ['label', label]);
   currentLabel = label;
-  setSetting.run('label', label);
-  insEvent.run(now(), null, 'label', label || '(none)', null, 'label changed on dashboard', 'server');
+  logEvent(now(), null, 'label', label || '(none)', null, 'label changed on dashboard', 'server');
   broadcast('health', health());
   res.json({ ok: true, label });
-});
+}));
 
 // The ML script posts its live prediction here, so the dashboard can show it
 app.post('/api/ml', (req, res) => {
@@ -187,28 +211,27 @@ app.post('/api/ml', (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/export.csv', (req, res) => {
-  const where = req.query.source ? 'WHERE source = ?' : '';
-  const args = req.query.source ? [String(req.query.source)] : [];
-  const rows = db.prepare(`SELECT * FROM readings ${where} ORDER BY id`).all(...args);
+const esc = (v) => (v === null || v === undefined ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+
+app.get('/api/export.csv', wrap(async (req, res) => {
+  const src = req.query.source ? String(req.query.source) : null;
+  const { rows } = await q(`SELECT * FROM readings ${src ? 'WHERE source = $1' : ''} ORDER BY id`, src ? [src] : []);
   const head = ['id', 'timestamp_wib', 'epoch', 'device_ts', ...COLS, 'label', 'source'];
   const wib = (e) => new Date((e + 7 * 3600) * 1000).toISOString().replace('T', ' ').slice(0, 19);
-  const esc = (v) => (v === null || v === undefined ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
   const lines = [head.join(',')];
   for (const r of rows) lines.push([r.id, wib(r.epoch), r.epoch, r.device_ts, ...COLS.map((c) => r[c]), r.label, r.source].map(esc).join(','));
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', `attachment; filename="aquaguard_dataset_${new Date().toISOString().slice(0, 10)}.csv"`);
   res.send(lines.join('\n'));
-});
+}));
 
-app.get('/api/events.csv', (req, res) => {
-  const rows = db.prepare('SELECT * FROM events ORDER BY id').all();
+app.get('/api/events.csv', wrap(async (req, res) => {
+  const { rows } = await q('SELECT * FROM events ORDER BY id');
   const head = ['id', 'epoch', 'device_ts', 'type', 'name', 'value', 'detail', 'source'];
-  const esc = (v) => (v === null || v === undefined ? '' : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="aquaguard_events.csv"');
   res.send([head.join(','), ...rows.map((r) => head.map((h) => esc(r[h])).join(','))].join('\n'));
-});
+}));
 
 app.get('/api/stream', (req, res) => {
   // X-Accel-Buffering: no stops Nginx from holding back the live events
@@ -218,6 +241,13 @@ app.get('/api/stream', (req, res) => {
   clients.add(res);
   req.on('close', () => clients.delete(res));
 });
-setInterval(() => broadcast('health', health()), 5000);
 
-app.listen(PORT, () => console.log(`Dashboard: http://localhost:${PORT}`));
+// ---------------- Start ----------------
+(async () => {
+  await waitForDb();
+  const { rows } = await q('SELECT value FROM settings WHERE key = $1', ['label']);
+  currentLabel = rows[0]?.value || '';
+  startMqtt();
+  setInterval(() => broadcast('health', health()), 5000);
+  app.listen(PORT, () => console.log(`Dashboard: http://localhost:${PORT}`));
+})().catch((e) => { console.error('Startup failed:', e.message); process.exit(1); });
