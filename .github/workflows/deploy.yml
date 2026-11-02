@@ -35,7 +35,7 @@ jobs:
       - name: Git Checkout Repository
         uses: actions/checkout@v4
 
-      # Vault path must hold DASHBOARD_PASSWORD (and optionally MQTT_URL, TOPIC_BASE, DASHBOARD_USER)
+      # Vault path must hold DB_PASSWORD and DASHBOARD_PASSWORD (optional: DB_USER, DB_NAME, MQTT_URL, TOPIC_BASE, DASHBOARD_USER)
       - name: Import Deploy Secrets from Hashicorp
         id: vault_secrets
         uses: hashicorp/vault-action@v2

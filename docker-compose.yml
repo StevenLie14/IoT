@@ -7,16 +7,46 @@ services:
     build:
       context: .
     container_name: aquaguard
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "7575:7575"
     environment:
       - PORT=7575
+      - PGHOST=db
+      - PGPORT=5432
+      - PGUSER=${DB_USER:-aquaguard}
+      - PGPASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - PGDATABASE=${DB_NAME:-aquaguard}
       - MQTT_URL=${MQTT_URL:-mqtt://broker.hivemq.com:1883}
       - TOPIC_BASE=${TOPIC_BASE:-aquaguard/steven-2802941592}
       - DASHBOARD_USER=${DASHBOARD_USER:-admin}
       - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
+    networks:
+      - aquaguard_net
+
+  db:
+    image: postgres:17-alpine
+    container_name: aquaguard-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER:-aquaguard}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - POSTGRES_DB=${DB_NAME:-aquaguard}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
     volumes:
-      - aquaguard_data:/app/data
+      - aquaguard_pg:/var/lib/postgresql/data
+    networks:
+      - aquaguard_net
 
 volumes:
-  aquaguard_data:
+  aquaguard_pg:
+
+networks:
+  aquaguard_net:
+    driver: bridge
