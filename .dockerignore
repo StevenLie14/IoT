@@ -1,0 +1,9 @@
+.git
+.github
+**/node_modules
+**/*.db
+**/*.db-*
+firmware
+ml
+.env
+README.md

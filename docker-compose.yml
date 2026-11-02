@@ -1,0 +1,22 @@
+services:
+  aquaguard:
+    tty: true
+    pull_policy: always
+    restart: unless-stopped
+    image: ${REGISTRY_URL:-registry.stevenlie.my.id}/stevenlie14/aquaguard:latest
+    build:
+      context: .
+    container_name: aquaguard
+    ports:
+      - "7575:7575"
+    environment:
+      - PORT=7575
+      - MQTT_URL=${MQTT_URL:-mqtt://broker.hivemq.com:1883}
+      - TOPIC_BASE=${TOPIC_BASE:-aquaguard/steven-2802941592}
+      - DASHBOARD_USER=${DASHBOARD_USER:-admin}
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
+    volumes:
+      - aquaguard_data:/app/data
+
+volumes:
+  aquaguard_data:
