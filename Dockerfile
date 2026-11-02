@@ -1,5 +1,5 @@
 # AquaGuard server + dashboard
-FROM node:22-alpine
+FROM node:26-alpine
 
 WORKDIR /app
 
@@ -9,15 +9,12 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY server/ ./
 
 ENV NODE_ENV=production \
-    PORT=7575 \
-    DB_FILE=/app/data/aquaguard.db
+    PORT=7575
 
-# SQLite file lives in a volume mounted at /app/data
-RUN mkdir -p /app/data && chown -R node:node /app/data
 USER node
 
 EXPOSE 7575
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
   CMD wget -qO- "http://127.0.0.1:${PORT}/healthz" >/dev/null || exit 1
 
 CMD ["node", "server.js"]
