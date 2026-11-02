@@ -65,6 +65,10 @@ function showReading(r) {
   $('bAuto').textContent = 'Auto: ' + (r.auto ? 'ON' : 'off');
   $('bDemo').textContent = 'Demo: ' + (r.demo ? 'ON' : 'off');
   $('fault').textContent = r.fault ? 'Fault: ' + r.fault : '';
+  if (r.ml) {   // prediction made on the ESP32 itself
+    $('ml').textContent = r.ml;
+    $('mlsub').textContent = 'decision tree on ESP32 · ' + time(r.epoch);
+  }
 }
 
 function addLog(e, top = true) {
