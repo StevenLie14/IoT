@@ -34,6 +34,7 @@ db.exec(`
     ph REAL, ph_v REAL, flow REAL, vol_ml REAL, f_top INTEGER, f_bot INTEGER,
     score INTEGER, state TEXT, drain INTEGER, fill INTEGER, feeder INTEGER,
     buzzer INTEGER, auto INTEGER, demo INTEGER, fault TEXT,
+    ml TEXT,                         -- prediction made on the ESP32 (decision tree)
     label TEXT,                      -- condition label set on the dashboard (for ML)
     source TEXT                      -- 'device' or 'sim'
   );
@@ -47,8 +48,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_events_epoch ON events(epoch);
 `);
 
+// Databases created before the on-device model existed get the new column
+if (!db.prepare('PRAGMA table_info(readings)').all().some((c) => c.name === 'ml')) db.exec('ALTER TABLE readings ADD COLUMN ml TEXT');
+
 const COLS = ['t_tank', 't_res', 'tds', 'tds_v', 'turb', 'turb_v', 'ph', 'ph_v', 'flow', 'vol_ml', 'f_top', 'f_bot',
-  'score', 'state', 'drain', 'fill', 'feeder', 'buzzer', 'auto', 'demo', 'fault'];
+  'score', 'state', 'drain', 'fill', 'feeder', 'buzzer', 'auto', 'demo', 'fault', 'ml'];
+const TEXT_COLS = ['state', 'fault', 'ml'];
 const insReading = db.prepare(`INSERT INTO readings (epoch, device_ts, ${COLS.join(',')}, label, source)
   VALUES (?, ?, ${COLS.map(() => '?').join(',')}, ?, ?)`);
 const insEvent = db.prepare(`INSERT INTO events (epoch, device_ts, type, name, value, detail, source) VALUES (?,?,?,?,?,?,?)`);
@@ -89,7 +94,7 @@ client.on('message', (topic, buf) => {
   const t = now();
   const source = m.src === 'sim' ? 'sim' : 'device';
   if (sub === 'data') {
-    const vals = COLS.map((c) => (c === 'state' || c === 'fault' ? (m[c] ?? null) : num(m[c])));
+    const vals = COLS.map((c) => (TEXT_COLS.includes(c) ? (m[c] ?? null) : num(m[c])));
     const info = insReading.run(t, num(m.ts), ...vals, currentLabel || null, source);
     latest = { id: Number(info.lastInsertRowid), epoch: t, device_ts: num(m.ts), ...Object.fromEntries(COLS.map((c, i) => [c, vals[i]])), label: currentLabel || null, source };
     lastDataAt = Date.now();
