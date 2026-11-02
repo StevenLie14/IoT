@@ -7,7 +7,7 @@ aquaguard_project/
 ├─ firmware/aquaguard/      Firmware ESP32 (sensor, skor, aturan otomatis, MQTT)
 │   ├─ aquaguard.ino
 │   └─ config.h             SEMUA pengaturan dan kalibrasi ada di sini
-├─ server/                  Server Node.js: MQTT -> SQLite, dashboard, ekspor CSV
+├─ server/                  Server Node.js: MQTT -> PostgreSQL, dashboard, ekspor CSV
 │   ├─ server.js
 │   ├─ public/              Dashboard (index.html, app.js)
 │   └─ tools/simulate.js    ESP32 palsu untuk tes tanpa hardware
@@ -24,7 +24,7 @@ aquaguard_project/
 | ESP32, minimal 3 sensor | DS18B20 (suhu), TDS, turbidity (+ volume buang perkiraan) |
 | Minimal 2 aktuator, rule-based | Pompa buang dan pompa isi (relay), buzzer, LED. Aturan R1 (skor < 60 tiga kali → ganti air 10/20/30%), R2 (selisih suhu), R3 (volume), R7 (timeout 3 menit), R10 (cooldown) |
 | MQTT | `TOPIC_BASE/data` tiap 5 detik, `/event`, `/cmd`, `/status` |
-| Penyimpanan terus-menerus | SQLite (`server/aquaguard.db`): tabel `readings` dan `events` |
+| Penyimpanan terus-menerus | PostgreSQL: tabel `readings` dan `events` |
 | Dashboard | Nilai live, status aktuator, grafik riwayat, tombol kontrol, log event |
 | Dataset minimal 1.000 baris | Ekspor CSV dari dashboard. 1.000 baris = sekitar 83 menit logging |
 
@@ -54,17 +54,23 @@ pH dan float switch dimatikan (`USE_PH false`, `USE_FLOATS false`).
 
 ## 2. Server dan dashboard
 
-Butuh **Node.js 22.13 atau lebih baru** (memakai SQLite bawaan Node, tanpa instalasi database).
+Server memakai **PostgreSQL**. Cara paling mudah menjalankan server + database sekaligus adalah Docker:
+
+```bash
+cp .env.example .env      # isi DB_PASSWORD dan DASHBOARD_PASSWORD
+docker compose up -d --build
+```
+
+Buka **http://localhost:7575**. Laptop cukup terhubung internet; tidak harus satu Wi-Fi dengan ESP32.
+
+Tanpa Docker (butuh Node.js 22+ dan PostgreSQL yang sudah terpasang):
 
 ```bash
 cd server
 npm install
-npm start
+PGHOST=localhost PGUSER=aquaguard PGPASSWORD=... PGDATABASE=aquaguard npm start
 ```
-
-Buka **http://localhost:3000**. Laptop cukup terhubung internet; tidak harus satu Wi-Fi dengan ESP32.
-
-Peringatan `ExperimentalWarning: SQLite` di terminal itu normal.
+Lalu buka http://localhost:3000. Tabel dibuat otomatis saat server pertama kali jalan.
 
 Tes tanpa hardware (data ditandai `sim` dan tidak ikut di CSV device):
 
@@ -133,14 +139,15 @@ Mengikuti pola repo `stevenlie` dan `serverh1`: GitHub Actions di runner `shin` 
 push ke Harbor, lalu `docker compose up` di server. Nginx + SSL dibuat lewat repo `ansible-infrastructure`.
 
 File yang dipakai: `Dockerfile`, `docker-compose.yml`, `.github/workflows/deploy.yml`.
-Container berjalan di port **7575**, database tersimpan di volume Docker `aquaguard_data`.
+Ada dua container: `aquaguard` (Node 26, port **7575**) dan `aquaguard-db` (PostgreSQL 17, tidak dibuka ke luar).
+Data database tersimpan di volume Docker `aquaguard_pg`.
 
 ### Langkah sekali saja
-1. Buat repo GitHub baru **`StevenLie14/aquaguard`** (boleh private) dan push isi folder ini (branch `main`).
-2. Di `ansible-infrastructure/.env`: set `GITHUB_REPO_URL=https://github.com/StevenLie14/aquaguard`, lalu jalankan
+1. Kode ada di repo **`StevenLie14/IoT`**. Deploy berjalan saat ada push ke branch `main`.
+2. Di `ansible-infrastructure/.env`: set `GITHUB_REPO_URL=https://github.com/StevenLie14/IoT`, lalu jalankan
    `--tags runner` (daftarkan runner `shin` ke repo ini) dan `--tags secret` (REGISTRY_* dan VAULT_*).
-3. Di Vault, di path `VAULT_PATH` untuk repo ini, simpan `DASHBOARD_PASSWORD` (wajib) dan opsional
-   `DASHBOARD_USER`, `MQTT_URL`, `TOPIC_BASE`.
+3. Di Vault, di path `VAULT_PATH` untuk repo ini, simpan `DB_PASSWORD` dan `DASHBOARD_PASSWORD` (wajib),
+   dan opsional `DB_USER`, `DB_NAME`, `DASHBOARD_USER`, `MQTT_URL`, `TOPIC_BASE`.
 4. Buat DNS A record, misalnya `aquaguard.stevenlie.my.id`, ke IP server.
 5. Di `ansible-infrastructure/inventory/host_vars/nginx.yml`: `domain_name: "aquaguard.stevenlie.my.id"`,
    `frontend_port: 7575`, `has_backend: false`, lalu jalankan `--tags nginx`.
@@ -153,7 +160,7 @@ Prediksi live dari laptop ke server online:
 
 ### Jalankan dengan Docker di komputer sendiri
 ```bash
-cp .env.example .env      # isi DASHBOARD_PASSWORD
+cp .env.example .env      # isi DB_PASSWORD dan DASHBOARD_PASSWORD
 docker compose up -d --build
 ```
 Buka http://localhost:7575.
