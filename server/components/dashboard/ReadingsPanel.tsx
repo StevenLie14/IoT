@@ -52,7 +52,6 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
           <span className="num">{formatNumber(reading?.t_tank)}</span>
           <span className="unit">°C</span>
         </div>
-        <span className="sub">tank water</span>
         <RangeBar value={reading?.t_tank} range={RANGES.temperature} level={temperatureLevel} unit=" °C" />
         <Sparkline values={recent.map((row) => row.t_tank)} />
       </div>
@@ -63,7 +62,6 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
           <span className="num">{formatNumber(reading?.tds, 0)}</span>
           <span className="unit">ppm</span>
         </div>
-        <span className="sub">dissolved minerals</span>
         <RangeBar value={reading?.tds} range={RANGES.tds} level={tdsLevel} unit=" ppm" />
         <Sparkline values={recent.map((row) => row.tds)} />
       </div>
@@ -74,7 +72,6 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
           <span className="num">{formatNumber(reading?.turb, 0)}</span>
           <span className="unit">/ 100</span>
         </div>
-        <span className="sub">0 clear · 100 dark</span>
         <RangeBar value={reading?.turb} range={RANGES.turbidity} level={turbidityLevel} />
         <Sparkline values={recent.map((row) => row.turb)} />
       </div>

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'IoT Project',
+  title: 'Water Quality Monitor',
   description: 'Aquarium water-quality monitoring and automatic water change',
 };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 };

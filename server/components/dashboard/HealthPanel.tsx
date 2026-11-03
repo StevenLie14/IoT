@@ -21,7 +21,6 @@ export default function HealthPanel({ reading, lastChange }: Props) {
     <div className={`panel score ${hasScore ? scoreLevel(score) : ''}`}>
       <header>
         <h2>Water health</h2>
-        <span className="muted num">{reading?.state || '--'}</span>
       </header>
       <div className="body">
         <div className="score-row">
@@ -44,8 +43,7 @@ export default function HealthPanel({ reading, lastChange }: Props) {
           <dd>{autoText}</dd>
           <dt>Last water change</dt>
           <dd>{lastChangeText}</dd>
-          <dt>Source</dt>
-          <dd>{reading ? (reading.source === 'sim' ? 'Simulator' : 'ESP32') : '--'}</dd>
+          {reading?.source === 'sim' && (<><dt>Source</dt><dd>Simulator</dd></>)}
         </dl>
       </div>
     </div>

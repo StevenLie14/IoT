@@ -126,17 +126,19 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
   const autoOn = pending?.key === 'auto' ? Boolean(pending.command.on) : Boolean(reading?.auto);
   const demoOn = pending?.key === 'demo' ? Boolean(pending.command.on) : Boolean(reading?.demo);
 
-  function actuatorState(isOn: boolean | undefined, waitingKey: string) {
-    if (isPending(waitingKey)) return { className: 'actuator waiting', text: 'Starting' };
-    if (!reading) return { className: 'actuator', text: '--' };
-    return { className: isOn ? 'actuator on' : 'actuator', text: isOn ? 'On' : 'Off' };
+  // One plain status line: quiet when nothing runs, highlighted when something does
+  function statusLine() {
+    if (!reading) return { text: 'Waiting for data', active: false };
+    const running = [
+      isPending('drain') || isPending('drain_float') ? 'Starting drain pump' : reading.drain ? 'Drain pump running' : '',
+      isPending('fill') || isPending('fill_float') ? 'Starting fill pump' : reading.fill ? 'Fill pump running' : '',
+      reading.buzzer ? 'Buzzer on' : '',
+    ].filter(Boolean);
+    if (changeRunning) running.unshift(`Water change: ${reading.state}`);
+    return running.length ? { text: running.join(' · '), active: true } : { text: 'Pumps idle', active: false };
   }
 
-  const drain = actuatorState(Boolean(reading?.drain), 'drain');
-  const fill = actuatorState(Boolean(reading?.fill), 'fill');
-  const buzzerOn = Boolean(reading?.buzzer);
-
-  const stateClass = WORKING_STATES.includes(reading?.state ?? '') ? 'actuator on' : 'actuator';
+  const status = statusLine();
 
   return (
     <div className="panel">
@@ -144,24 +146,9 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
         <h2>Control</h2>
       </header>
       <div className="body">
-        <div className="actuators">
-          <div className={drain.className}>
-            <span>Drain pump</span>
-            <strong><i className="dot" /><b>{drain.text}</b></strong>
-          </div>
-          <div className={fill.className}>
-            <span>Fill pump</span>
-            <strong><i className="dot" /><b>{fill.text}</b></strong>
-          </div>
-          <div className={buzzerOn ? 'actuator on' : 'actuator'}>
-            <span>Buzzer</span>
-            <strong><i className="dot" /><b>{reading ? (buzzerOn ? 'On' : 'Off') : '--'}</b></strong>
-          </div>
-          <div className={stateClass}>
-            <span>State</span>
-            <strong><b>{reading?.state || '--'}</b></strong>
-          </div>
-        </div>
+        <p className={`status-line ${status.active ? 'active' : ''}`}>
+          <i className="dot" />{status.text}
+        </p>
 
         {!deviceOnline && (
           <div className="offline-note">
@@ -201,8 +188,8 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
           </div>
         </div>
 
-        <div className="control-group">
-          <span className="title">Test</span>
+        <details className="maintenance">
+          <summary>Maintenance and pump tests</summary>
           <div className="row">
             <button className={`btn ${isPending('drain') ? 'is-pending' : isIdle && reading?.drain ? 'active' : ''}`}
               disabled={disabled || !!pending || !isIdle || tankLow} onClick={() => request(testRequest('drain'))}
@@ -235,7 +222,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
               {tankFull ? 'Fill is off: the top float says the tank is full.' : 'Drain is off: the bottom float says the tank is low.'}
             </p>
           )}
-        </div>
+        </details>
 
         <div className={`feedback ${message.kind}`} role="status" aria-live="polite">
           {message.text}

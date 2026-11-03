@@ -3,11 +3,10 @@
 import ThemeToggle from './ThemeToggle';
 import { useNow } from '@/hooks/useNow';
 import type { ThemeChoice } from '@/hooks/useTheme';
-import type { Health, Reading } from '@/lib/client/types';
+import type { Health } from '@/lib/client/types';
 
 type Props = {
   health: Health | null;
-  reading: Reading | null;
   lastReadingAt: number;
   canSignOut: boolean;
   theme: ThemeChoice;
@@ -21,18 +20,10 @@ function lastReadingText(lastReadingAt: number, now: number) {
   return `Last reading ${Math.round(seconds / 60)} min ago`;
 }
 
-function modeName(reading: Reading | null) {
-  if (!reading) return '--';
-  if (reading.demo) return 'Demo';
-  if (reading.auto) return 'Auto';
-  return 'Manual';
-}
-
-export default function TopBar({ health, reading, lastReadingAt, canSignOut, theme, onThemeChange }: Props) {
+export default function TopBar({ health, lastReadingAt, canSignOut, theme, onThemeChange }: Props) {
   const now = useNow();
   const deviceOnline = health?.device === 'online';
 
-  const tagClass = reading?.auto ? 'tag accent' : 'tag';
 
   async function signOut() {
     await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
@@ -42,7 +33,7 @@ export default function TopBar({ health, reading, lastReadingAt, canSignOut, the
   return (
     <header className="topbar">
       <div className="brand">
-        IoT Project <small>Tank 01</small>
+        Water Quality Monitor
       </div>
 
       <div className="conn" aria-label="Connection status">
@@ -59,7 +50,6 @@ export default function TopBar({ health, reading, lastReadingAt, canSignOut, the
 
       <div className="right">
         <ThemeToggle choice={theme} onChange={onThemeChange} />
-        <span className={tagClass}>{modeName(reading)}</span>
         {canSignOut && (
           <button className="linkbtn" onClick={signOut}>
             Sign out
