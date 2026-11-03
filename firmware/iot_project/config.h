@@ -3,13 +3,15 @@
 #pragma once
 
 // ---------- Wi-Fi and MQTT ----------
-#define WIFI_SSID     "YOUR_WIFI_NAME"
-#define WIFI_PASS     "YOUR_WIFI_PASSWORD"
+// Wi-Fi name/password and MQTT login live in secrets.h (copy secrets.example.h)
+#if __has_include("secrets.h")
+#include "secrets.h"
+#else
+#error "secrets.h not found: copy secrets.example.h to secrets.h and fill it in"
+#endif
 #define MQTT_HOST     "broker.hivemq.com"   // e.g. "xxxx.s1.eu.hivemq.cloud" for a private broker
 #define MQTT_PORT     1883                  // 8883 when MQTT_USE_TLS is true
 #define MQTT_USE_TLS  false                 // true: encrypted connection, checked against mqtt_ca.h
-#define MQTT_USER     ""                    // empty = no login (public broker)
-#define MQTT_PASS     ""
 // Use something unique so nobody else on the public broker uses the same topics
 #define TOPIC_BASE    "iot-project/steven-2802941592"
 

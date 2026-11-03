@@ -6,7 +6,8 @@ Paket ini berisi semua kode untuk Assignment 2 dan tahap AI (AOL):
 iot/
 ├─ firmware/iot_project/    Firmware ESP32 (sensor, skor, aturan otomatis, MQTT)
 │   ├─ iot_project.ino
-│   └─ config.h             SEMUA pengaturan dan kalibrasi ada di sini
+│   ├─ config.h             SEMUA pengaturan dan kalibrasi ada di sini
+│   └─ secrets.example.h    Template Wi-Fi dan login MQTT (salin ke secrets.h, tidak di-commit)
 ├─ server/                  Next.js full-stack (React + API): MQTT -> PostgreSQL, dashboard, ekspor CSV
 │   ├─ app/                 Halaman (dashboard, login) dan API (app/api/*/route.ts)
 │   ├─ components/          Komponen React (Dashboard, LoginForm)
@@ -40,8 +41,9 @@ PubSubClient (Nick O'Leary), ArduinoJson (Benoit Blanchon, versi 7).
 **Board:** ESP32 Dev Module (core esp32 by Espressif 3.x).
 
 **Langkah:**
-1. Buka `firmware/iot_project/iot_project.ino` (folder `iot_project` harus berisi `iot_project.ino` dan `config.h`).
-2. Di `config.h` isi `WIFI_SSID`, `WIFI_PASS`. `TOPIC_BASE` boleh dibiarkan, asal sama dengan server.
+1. Buka `firmware/iot_project/iot_project.ino` (folder `iot_project` harus berisi `iot_project.ino`, `config.h` dan `secrets.h`).
+2. Salin `secrets.example.h` menjadi `secrets.h`, lalu isi `WIFI_SSID`, `WIFI_PASS`. File ini ada di `.gitignore`, jadi password tidak ikut ter-commit.
+   `TOPIC_BASE` di `config.h` boleh dibiarkan, asal sama dengan server.
 3. Cek nilai kalibrasi `TURB_V_CLEAR` (tegangan turbidity di air bening). Pompa berhenti di float, jadi tidak ada kalibrasi volume.
    Banyaknya air yang diganti ditentukan oleh jarak float atas ke float bawah.
 4. Upload, buka Serial Monitor 115200, akhir baris **Newline**.
@@ -202,15 +204,18 @@ broker.hivemq.com itu publik: siapa pun yang tahu nama topiknya bisa membaca dat
 
 1. Buat cluster gratis di HiveMQ Cloud (Serverless). Catat host-nya, misalnya `abcd1234.s1.eu.hivemq.cloud`.
 2. Di menu Access Management cluster itu, buat dua credential: satu untuk ESP32, satu untuk server.
-3. Firmware (`config.h`):
+3. Firmware, di `config.h`:
    ```c
    #define MQTT_HOST     "abcd1234.s1.eu.hivemq.cloud"
    #define MQTT_PORT     8883
    #define MQTT_USE_TLS  true
+   ```
+   dan di `secrets.h` (tidak di-commit):
+   ```c
    #define MQTT_USER     "esp32-user"
    #define MQTT_PASS     "password-esp32"
    ```
-   Sertifikat root (ISRG Root X1, berlaku sampai 2035) sudah ada di `mqtt_ca.h`. Jangan commit `config.h` yang berisi password asli.
+   Sertifikat root (ISRG Root X1, berlaku sampai 2035) sudah ada di `mqtt_ca.h`.
 4. Server dan Node-RED: tambahkan ke Vault, lalu deploy ulang:
    ```
    MQTT_URL=mqtts://abcd1234.s1.eu.hivemq.cloud:8883
