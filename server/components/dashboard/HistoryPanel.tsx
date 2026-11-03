@@ -67,8 +67,16 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
           },
         },
         scales: {
-          x: { grid: { display: false }, border: { color: colors.grid }, ticks: { maxTicksLimit: 6, maxRotation: 0, autoSkipPadding: 24 } },
-          y: { grid: { color: colors.grid }, border: { display: false }, ticks: { maxTicksLimit: 5 } },
+          x: {
+            grid: { display: false },
+            border: { color: colors.grid },
+            ticks: { maxTicksLimit: 6, maxRotation: 0, autoSkipPadding: 24 },
+          },
+          y: {
+            grid: { color: colors.grid },
+            border: { display: false },
+            ticks: { maxTicksLimit: 5 },
+          },
           ...scales,
         },
       },
@@ -116,7 +124,12 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
 export default function HistoryPanel({ latest }: { latest: Reading | null }) {
   const [minutes, setMinutes] = useState(30);
   const [error, setError] = useState('');
-  const canvases = useRef<Record<ChartName, HTMLCanvasElement | null>>({ score: null, turbidity: null, temperature: null, pumps: null });
+  const canvases = useRef<Record<ChartName, HTMLCanvasElement | null>>({
+    score: null,
+    turbidity: null,
+    temperature: null,
+    pumps: null,
+  });
   const charts = useRef<Partial<Record<ChartName, Chart>>>({});
   const lastAddedId = useRef<number | null>(null);
 

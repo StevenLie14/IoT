@@ -54,7 +54,6 @@ export type LogEvent = {
 
 export type Command = {
   cmd: string;
-  pct?: number;
   sec?: number;
   on?: boolean;
 };

@@ -37,11 +37,23 @@ export default function LoginForm() {
       <div className={'error' + (error ? ' show' : '')} role="alert">{error}</div>
       <div className="field">
         <label htmlFor="username">Username</label>
-        <input id="username" autoComplete="username" autoFocus value={username} onChange={(e) => setUsername(e.target.value)} />
+        <input
+          id="username"
+          autoComplete="username"
+          autoFocus
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
       </div>
       <div className="field">
         <label htmlFor="password">Password</label>
-        <input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <input
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
       </div>
       <button className="btn primary" type="submit" disabled={busy}>{busy ? 'Signing in' : 'Sign in'}</button>
     </form>

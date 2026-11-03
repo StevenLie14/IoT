@@ -60,10 +60,13 @@ uint32_t manualUntil = 0;
 bool drainOn = false, fillOn = false, buzzerOn = false;
 
 // Buzzer pattern (non-blocking)
-int beepsLeft = 0; bool beepPhase = false; uint32_t beepNext = 0;
+int beepsLeft = 0;
+bool beepPhase = false;
+uint32_t beepNext = 0;
 
 // Sensor cycle phases
-uint32_t cycleStart = 0; int phase = 0;
+uint32_t cycleStart = 0;
+int phase = 0;
 
 // ---------------- Helpers ----------------
 // Full MQTT topic for a sub-topic, e.g. topic("data") -> TOPIC_BASE/data
@@ -71,11 +74,16 @@ String topic(const char* sub) { return String(TOPIC_BASE) + "/" + sub; }
 // Wait after a water change before R1 may start another one (shorter in demo mode)
 uint32_t cooldownMs() { return demoMode ? 60000UL : COOLDOWN_MS; }
 // Unix time from NTP, or 0 while the clock is not set yet
-uint32_t epochNow() { time_t t = time(nullptr); return t > 1600000000 ? (uint32_t)t : 0; }
+uint32_t epochNow() {
+  time_t t = time(nullptr);
+  bool clockSet = t > 1600000000;   // a date before 2020 means NTP has not answered yet
+  return clockSet ? (uint32_t)t : 0;
+}
 
 // Switches a relay, hiding whether the board is active-low or active-high
 void relay(int pin, bool on) {
-  digitalWrite(pin, (RELAY_ACTIVE_LOW ? !on : on) ? HIGH : LOW);
+  bool pinHigh = RELAY_ACTIVE_LOW ? !on : on;
+  digitalWrite(pin, pinHigh ? HIGH : LOW);
 }
 
 // Sends one event (state change, pump on/off, fault, ...) to MQTT and prints it on Serial
@@ -98,8 +106,12 @@ uint32_t pumpChangedAt = 0;   // last time a pump switched on or off (see PUMP_Q
 void setDrain(bool on, const char* why) {
   if (on == drainOn) return;
   pumpChangedAt = millis();
-  if (on && fillOn) { fillOn = false; relay(PIN_RELAY_FILL, false); }
-  drainOn = on; relay(PIN_RELAY_DRAIN, on);
+  if (on && fillOn) {
+    fillOn = false;
+    relay(PIN_RELAY_FILL, false);
+  }
+  drainOn = on;
+  relay(PIN_RELAY_DRAIN, on);
   publishEvent("actuator", "drain", on ? 1 : 0, why);
 }
 
@@ -107,23 +119,38 @@ void setDrain(bool on, const char* why) {
 void setFill(bool on, const char* why) {
   if (on == fillOn) return;
   pumpChangedAt = millis();
-  if (on && drainOn) { drainOn = false; relay(PIN_RELAY_DRAIN, false); }
-  fillOn = on; relay(PIN_RELAY_FILL, on);
+  if (on && drainOn) {
+    drainOn = false;
+    relay(PIN_RELAY_DRAIN, false);
+  }
+  fillOn = on;
+  relay(PIN_RELAY_FILL, on);
   publishEvent("actuator", "fill", on ? 1 : 0, why);
 }
 
 // Queues n short beeps; updateBuzzer() plays them without blocking
-void beep(int n) { beepsLeft = n; beepPhase = false; beepNext = millis(); }
+void beep(int n) {
+  beepsLeft = n;
+  beepPhase = false;
+  beepNext = millis();
+}
 
 // Moves the water-change state machine to a new state and logs it
 void enterState(State s, const String& detail) {
-  state = s; stateSince = millis();
+  state = s;
+  stateSince = millis();
   publishEvent("state", STATE_NAMES[s], 0, detail);
 }
 
 // Float switches are debounced: a new state only counts after it has held for
 // FLOAT_DEBOUNCE_MS, so a spike from a pump or relay switching on cannot stop it.
-struct FloatInput { int pin; int triggeredLevel; bool stable; bool candidate; uint32_t since; };
+struct FloatInput {
+  int pin;
+  int triggeredLevel;   // pin level that means "float triggered"
+  bool stable;          // debounced state, the one the logic uses
+  bool candidate;       // latest raw state, waiting to become stable
+  uint32_t since;       // when the candidate state was first seen
+};
 FloatInput fTop = { PIN_FLOAT_TOP, FLOAT_TOP_TRIGGERED_LEVEL, false, false, 0 };
 FloatInput fBot = { PIN_FLOAT_BOT, FLOAT_BOT_TRIGGERED_LEVEL, false, false, 0 };
 
@@ -131,9 +158,22 @@ FloatInput fBot = { PIN_FLOAT_BOT, FLOAT_BOT_TRIGGERED_LEVEL, false, false, 0 };
 void updateFloat(FloatInput& f, bool first = false) {
   bool raw = digitalRead(f.pin) == f.triggeredLevel;
   uint32_t now = millis();
-  if (first) { f.stable = f.candidate = raw; f.since = now; return; }
-  if (raw != f.candidate) { f.candidate = raw; f.since = now; }
-  else if (raw != f.stable && now - f.since >= FLOAT_DEBOUNCE_MS) f.stable = raw;
+
+  if (first) {
+    f.stable = raw;
+    f.candidate = raw;
+    f.since = now;
+    return;
+  }
+
+  if (raw != f.candidate) {
+    // The pin changed: start timing the new state
+    f.candidate = raw;
+    f.since = now;
+  } else if (raw != f.stable && now - f.since >= FLOAT_DEBOUNCE_MS) {
+    // The new state held long enough: accept it
+    f.stable = raw;
+  }
 }
 
 // true when the tank is full (top float) / low (bottom float)
@@ -142,54 +182,85 @@ bool floatBot() { return USE_FLOATS && fBot.stable; }
 
 // Reads an ADS1115 channel n times and returns the median, which ignores single noisy samples
 float readVoltsMedian(int ch, int n = 11) {
-  float s[16];
+  float samples[16];
   if (n > 16) n = 16;
-  for (int i = 0; i < n; i++) s[i] = ads.computeVolts(ads.readADC_SingleEnded(ch));
-  for (int i = 1; i < n; i++) {
-    float x = s[i]; int j = i - 1;
-    while (j >= 0 && s[j] > x) { s[j + 1] = s[j]; j--; }
-    s[j + 1] = x;
+  for (int i = 0; i < n; i++) {
+    samples[i] = ads.computeVolts(ads.readADC_SingleEnded(ch));
   }
-  return s[n / 2];
+
+  // Insertion sort (only a few samples), then take the middle one
+  for (int i = 1; i < n; i++) {
+    float value = samples[i];
+    int j = i - 1;
+    while (j >= 0 && samples[j] > value) {
+      samples[j + 1] = samples[j];
+      j--;
+    }
+    samples[j + 1] = value;
+  }
+  return samples[n / 2];
 }
 
-float lin(float v, float good, float bad) {   // 100 at good, 0 at bad, linear between
-  float t = (v - good) / (bad - good);
-  if (t < 0) t = 0; if (t > 1) t = 1;
+// Sub-score: 100 at the good value, 0 at the bad value, linear in between
+float lin(float v, float good, float bad) {
+  float t = (v - good) / (bad - good);   // 0 at good, 1 at bad
+  t = constrain(t, 0.0f, 1.0f);
   return 100.0f * (1.0f - t);
 }
 
 // ---------------- Score ----------------
 // Water health score 0-100: weighted mix of TDS, turbidity and temperature
 int computeScore() {
-  float wSum = 0, sum = 0;
-  // TDS (0.5)
-  sum += 0.5f * lin(tdsPpm, TDS_GOOD, TDS_BAD); wSum += 0.5f;
-  // Turbidity (0.375): index 0 = as clear as calibration, 100 = TURB_V_SPAN darker
-  sum += 0.375f * (100.0f - turbIdx); wSum += 0.375f;
-  // Temperature (0.125), left out if the DS18B20 gives no reading
+  float weightedSum = 0;
+  float totalWeight = 0;
+
+  // TDS (weight 0.5)
+  float tdsScore = lin(tdsPpm, TDS_GOOD, TDS_BAD);
+  weightedSum += 0.5f * tdsScore;
+  totalWeight += 0.5f;
+
+  // Turbidity (weight 0.375): index 0 = as clear as calibration, 100 = TURB_V_SPAN darker
+  float turbScore = 100.0f - turbIdx;
+  weightedSum += 0.375f * turbScore;
+  totalWeight += 0.375f;
+
+  // Temperature (weight 0.125): full marks at 24-30 C, left out if the DS18B20 gives no reading
   if (!isnan(tTank)) {
-    float s = (tTank >= 24 && tTank <= 30) ? 100.0f
-            : (tTank < 24 ? lin(tTank, 24, 20) : lin(tTank, 30, 34));
-    sum += 0.125f * s; wSum += 0.125f;
+    float tempScore;
+    if (tTank < 24)      tempScore = lin(tTank, 24, 20);
+    else if (tTank > 30) tempScore = lin(tTank, 30, 34);
+    else                 tempScore = 100.0f;
+    weightedSum += 0.125f * tempScore;
+    totalWeight += 0.125f;
   }
-  return (int)roundf(sum / wSum);
+
+  return (int)roundf(weightedSum / totalWeight);
 }
 
 // ---------------- Water change ----------------
 // Starts a full water change: drain to the bottom float, settle, refill to the top float
 void startChange(const char* reason) {
-  if (state != IDLE) { Serial.println("Change already running"); return; }
-  manualDrain = manualFill = false;
+  if (state != IDLE) {
+    Serial.println("Change already running");
+    return;
+  }
+  manualDrain = false;
+  manualFill = false;
   enterState(DRAINING, reason);
-  if (floatBot()) { enterState(SETTLING, "tank already low"); return; }
+
+  if (floatBot()) {
+    enterState(SETTLING, "tank already low");
+    return;
+  }
   setDrain(true, reason);
 }
 
 // Emergency stop: both pumps off, manual tests cancelled, back to idle
 void stopAll(const char* why) {
-  setDrain(false, why); setFill(false, why);
-  manualDrain = manualFill = false;
+  setDrain(false, why);
+  setFill(false, why);
+  manualDrain = false;
+  manualFill = false;
   if (state != IDLE) enterState(IDLE, why);
 }
 
@@ -204,11 +275,17 @@ void finishChange(const char* why) {
 // A pump ran too long without reaching its float (float stuck, pump dry, leak).
 // Everything stops and auto mode is switched off until someone checks the tank.
 void pumpFault(const char* what) {
-  setDrain(false, what); setFill(false, what);
-  manualDrain = manualFill = false;
+  setDrain(false, what);
+  setFill(false, what);
+  manualDrain = false;
+  manualFill = false;
   beep(5);
   publishEvent("fault", what, 0, "pumps stopped, auto mode off");
-  if (autoMode) { autoMode = false; publishEvent("mode", "auto", 0, "off after fault"); }
+
+  if (autoMode) {
+    autoMode = false;
+    publishEvent("mode", "auto", 0, "off after fault");
+  }
   enterState(IDLE, what);
 }
 
@@ -222,13 +299,22 @@ void runStateMachine() {
     pumpFault(manualDrain ? "drain timeout" : "fill timeout");
     manualToFloat = false;
   }
-  if (manualDrain && (timeUp || floatBot())) { setDrain(false, timeUp ? "manual end: time up" : "manual end: bottom float"); manualDrain = false; }
-  if (manualFill && (timeUp || floatTop())) { setFill(false, timeUp ? "manual end: time up" : "manual end: top float"); manualFill = false; }
+  if (manualDrain && (timeUp || floatBot())) {
+    setDrain(false, timeUp ? "manual end: time up" : "manual end: bottom float");
+    manualDrain = false;
+  }
+  if (manualFill && (timeUp || floatTop())) {
+    setFill(false, timeUp ? "manual end: time up" : "manual end: top float");
+    manualFill = false;
+  }
   if (!manualDrain && !manualFill) manualToFloat = false;
 
   switch (state) {
     case DRAINING:   // R2: bottom float ends draining
-      if (now - stateSince >= DRAIN_TIMEOUT_MS) { pumpFault("drain timeout"); break; }
+      if (now - stateSince >= DRAIN_TIMEOUT_MS) {
+        pumpFault("drain timeout");
+        break;
+      }
       if (floatBot()) {
         setDrain(false, "bottom float");
         enterState(SETTLING, "bottom float reached");
@@ -242,7 +328,10 @@ void runStateMachine() {
       }
       break;
     case FILLING:    // R3: top float ends the refill
-      if (now - stateSince >= FILL_TIMEOUT_MS) { pumpFault("fill timeout"); break; }
+      if (now - stateSince >= FILL_TIMEOUT_MS) {
+        pumpFault("fill timeout");
+        break;
+      }
       if (floatTop()) finishChange("top float");
       break;
     default: break;
@@ -256,14 +345,23 @@ void runRules() {
   // not dirty water, so R1 must not drain the tank on it
   if (turbV < TURB_V_FAULT) {
     if (!turbFault) publishEvent("fault", "turbidity", turbV, "sensor reads near 0 V, R1 paused");
-    turbFault = true; lowCount = 0;
+    turbFault = true;
+    lowCount = 0;
     return;
   }
   turbFault = false;
+
   // A running pump sags the 5 V supply and stirs the water, so readings taken while a pump
   // runs, or within PUMP_QUIET_MS after it stops, do not count toward R1
-  if (drainOn || fillOn || millis() - pumpChangedAt < PUMP_QUIET_MS) { lowCount = 0; return; }
-  if (score < SCORE_THRESHOLD) lowCount++; else lowCount = 0;
+  bool pumpQuietTime = drainOn || fillOn || millis() - pumpChangedAt < PUMP_QUIET_MS;
+  if (pumpQuietTime) {
+    lowCount = 0;
+    return;
+  }
+
+  if (score < SCORE_THRESHOLD) lowCount++;
+  else lowCount = 0;
+
   bool cooling = (int32_t)(millis() - cooldownUntil) < 0;
   if (autoMode && state == IDLE && !cooling && lowCount >= LOW_READINGS_TO_ACT) {
     publishEvent("rule", "R1", score, String("score below ") + SCORE_THRESHOLD + " for " + LOW_READINGS_TO_ACT + " readings");
@@ -277,25 +375,59 @@ void runRules() {
 void handleCommand(const String& cmd, int arg) {
   if (cmd == "change")        startChange("manual change");
   else if (cmd == "stop")     stopAll("stop command");
-  else if (cmd == "auto")     { autoMode = arg != 0; publishEvent("mode", "auto", autoMode, ""); }
-  else if (cmd == "demo")     { demoMode = arg != 0; publishEvent("mode", "demo", demoMode, ""); }
+  else if (cmd == "auto") {
+    autoMode = arg != 0;
+    publishEvent("mode", "auto", autoMode, "");
+  }
+  else if (cmd == "demo") {
+    demoMode = arg != 0;
+    publishEvent("mode", "demo", demoMode, "");
+  }
   else if (cmd == "beep")     beep(1);
   else if (cmd == "drain" || cmd == "fill" || cmd == "drain_float" || cmd == "fill_float") {
     // drain / fill: timed test (default 3 s, max 30 s). drain_float / fill_float: run until the
     // float, limited by DRAIN_TIMEOUT_MS / FILL_TIMEOUT_MS. All of them stop at the floats.
-    if (state != IDLE) { Serial.println("Only when idle"); return; }
-    if (manualDrain || manualFill) { Serial.println("A pump test is already running"); return; }
+    if (state != IDLE) {
+      Serial.println("Only when idle");
+      return;
+    }
+    if (manualDrain || manualFill) {
+      Serial.println("A pump test is already running");
+      return;
+    }
     bool drain = cmd.startsWith("drain");
     bool toFloat = cmd.endsWith("_float");
+
     // Refuse a run that would go past a float: no fill when full, no drain when low
-    if (!drain && floatTop()) { publishEvent("refused", "fill", 0, "top float already reached"); return; }
-    if (drain && floatBot()) { publishEvent("refused", "drain", 0, "bottom float already reached"); return; }
-    uint32_t ms = toFloat ? (drain ? DRAIN_TIMEOUT_MS : FILL_TIMEOUT_MS) : (arg > 0 ? min(arg, 30) : 3) * 1000UL;
-    manualUntil = millis() + ms;
+    if (!drain && floatTop()) {
+      publishEvent("refused", "fill", 0, "top float already reached");
+      return;
+    }
+    if (drain && floatBot()) {
+      publishEvent("refused", "drain", 0, "bottom float already reached");
+      return;
+    }
+
+    uint32_t runMs;
+    const char* why;
+    if (toFloat) {
+      runMs = drain ? DRAIN_TIMEOUT_MS : FILL_TIMEOUT_MS;
+      why = drain ? "manual: drain to bottom float" : "manual: fill to top float";
+    } else {
+      int seconds = arg > 0 ? min(arg, 30) : 3;
+      runMs = seconds * 1000UL;
+      why = "manual test";
+    }
+    manualUntil = millis() + runMs;
     manualToFloat = toFloat;
-    const char* why = toFloat ? (drain ? "manual: drain to bottom float" : "manual: fill to top float") : "manual test";
-    if (drain) { manualDrain = true; setDrain(true, why); }
-    else       { manualFill = true;  setFill(true, why); }
+
+    if (drain) {
+      manualDrain = true;
+      setDrain(true, why);
+    } else {
+      manualFill = true;
+      setFill(true, why);
+    }
   }
   else Serial.printf("Unknown command: %s\n", cmd.c_str());
 }
@@ -305,7 +437,10 @@ void onMqtt(char* t, byte* payload, unsigned int len) {
   JsonDocument doc;
   if (deserializeJson(doc, payload, len)) return;
   String cmd = doc["cmd"] | "";
-  int arg = doc["pct"] | (doc["on"].is<bool>() ? (doc["on"].as<bool>() ? 1 : 0) : (doc["sec"] | 0));
+  // The argument arrives as {"on": true/false} for modes or {"sec": N} for pump tests
+  int arg;
+  if (doc["on"].is<bool>()) arg = doc["on"].as<bool>() ? 1 : 0;
+  else                      arg = doc["sec"] | 0;
   handleCommand(cmd, arg);
 }
 
@@ -315,13 +450,22 @@ void handleSerial() {
   while (Serial.available()) {
     char c = Serial.read();
     if (c == '\r') continue;
-    if (c != '\n') { line += c; continue; }
+    if (c != '\n') {
+      line += c;
+      continue;
+    }
+
+    // A full line arrived, e.g. "auto on" or "drain 3": split it into command and argument
     line.trim();
     if (line.length()) {
-      int sp = line.indexOf(' ');
-      String cmd = sp < 0 ? line : line.substring(0, sp);
-      String a = sp < 0 ? "" : line.substring(sp + 1);
-      int arg = (a == "on") ? 1 : (a == "off") ? 0 : a.toInt();
+      int space = line.indexOf(' ');
+      String cmd = space < 0 ? line : line.substring(0, space);
+      String argText = space < 0 ? "" : line.substring(space + 1);
+
+      int arg;
+      if (argText == "on")       arg = 1;
+      else if (argText == "off") arg = 0;
+      else                       arg = argText.toInt();
       handleCommand(cmd, arg);
     }
     line = "";
@@ -334,11 +478,19 @@ uint32_t lastWifiTry = 0, lastMqttTry = 0;
 // Keeps Wi-Fi and MQTT connected, retrying in the background without blocking the loop
 void keepConnected() {
   if (WiFi.status() != WL_CONNECTED) {
-    if (millis() - lastWifiTry > 10000) { lastWifiTry = millis(); WiFi.disconnect(); WiFi.begin(WIFI_SSID, WIFI_PASS); }
+    if (millis() - lastWifiTry > 10000) {
+      lastWifiTry = millis();
+      WiFi.disconnect();
+      WiFi.begin(WIFI_SSID, WIFI_PASS);
+    }
     return;
   }
+
   // TLS checks certificate dates, so wait until NTP has set the clock
-  if (MQTT_USE_TLS && epochNow() == 0) { mqtt.loop(); return; }
+  if (MQTT_USE_TLS && epochNow() == 0) {
+    mqtt.loop();
+    return;
+  }
   if (!mqtt.connected() && millis() - lastMqttTry > 5000) {
     lastMqttTry = millis();
     String id = "iot-project-" + String((uint32_t)ESP.getEfuseMac(), HEX);
@@ -388,12 +540,12 @@ void publishData() {
 void updateBuzzer() {
   uint32_t now = millis();
   if (beepsLeft > 0 && (int32_t)(now - beepNext) >= 0) {
-    beepPhase = !beepPhase; beepNext = now + 150;
-    if (!beepPhase) beepsLeft--;
+    beepPhase = !beepPhase;
+    beepNext = now + 150;
+    if (!beepPhase) beepsLeft--;   // one beep = one on phase + one off phase
   }
-  bool b = beepsLeft > 0 && beepPhase;
-  buzzerOn = b;
-  digitalWrite(PIN_BUZZER, b);
+  buzzerOn = beepsLeft > 0 && beepPhase;
+  digitalWrite(PIN_BUZZER, buzzerOn);
 }
 
 // Redraws the OLED: connection, mode, state, score and the latest readings
@@ -402,16 +554,37 @@ void drawOled() {
   oled.clearDisplay();
   oled.setTextSize(1);
   oled.setCursor(0, 0);
-  oled.printf("%s %s %s", WiFi.status() == WL_CONNECTED ? "W" : "-", mqtt.connected() ? "M" : "-",
-              demoMode ? "DEMO" : (autoMode ? "AUTO" : "MAN"));
-  oled.setCursor(80, 0); oled.print(STATE_NAMES[state]);
-  oled.setTextSize(2); oled.setCursor(0, 12); oled.printf("%3d", score);
-  oled.setTextSize(1); oled.setCursor(40, 12); oled.print("score");
-  if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) { oled.setCursor(86, 12); oled.print(WATER_SHORT[mlClass]); }
+
+  // Top row: Wi-Fi, MQTT, mode and state
+  const char* wifi = WiFi.status() == WL_CONNECTED ? "W" : "-";
+  const char* broker = mqtt.connected() ? "M" : "-";
+  const char* mode = demoMode ? "DEMO" : (autoMode ? "AUTO" : "MAN");
+  oled.printf("%s %s %s", wifi, broker, mode);
+  oled.setCursor(80, 0);
+  oled.print(STATE_NAMES[state]);
+
+  // Big score, with the on-device prediction and the temperature next to it
+  oled.setTextSize(2);
+  oled.setCursor(0, 12);
+  oled.printf("%3d", score);
+  oled.setTextSize(1);
+  oled.setCursor(40, 12);
+  oled.print("score");
+  if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) {
+    oled.setCursor(86, 12);
+    oled.print(WATER_SHORT[mlClass]);
+  }
   oled.setCursor(40, 22);
-  if (!isnan(tTank)) oled.printf("%.1fC", tTank); else oled.print("--C");
-  oled.setCursor(0, 34); oled.printf("TDS  %.0f ppm", tdsPpm);
-  oled.setCursor(0, 44); oled.printf("Turb %.2fV (%.0f)", turbV, turbIdx);
+  if (isnan(tTank)) oled.print("--C");
+  else              oled.printf("%.1fC", tTank);
+
+  // Sensor values
+  oled.setCursor(0, 34);
+  oled.printf("TDS  %.0f ppm", tdsPpm);
+  oled.setCursor(0, 44);
+  oled.printf("Turb %.2fV (%.0f)", turbV, turbIdx);
+
+  // Bottom row: what the pumps are doing
   oled.setCursor(0, 54);
   if (state == DRAINING) oled.print("drain to bottom float");
   else if (state == FILLING) oled.print("fill to top float");
@@ -435,18 +608,26 @@ void readTemperature() {
       Serial.println("DS18B20 found");
     }
   }
+
   for (int i = 0; tempCount >= 1 && i < 3; i++) {
     v = temps.getTempC(tempAddr);
-    if (v > -55 && v < 125 && v != 85.0f) {
-      tTank = v; tempOkAt = millis(); tempAlerted = false;
+    // -127 = no answer, 85 = power-on value before any conversion
+    bool valid = v > -55 && v < 125 && v != 85.0f;
+    if (valid) {
+      tTank = v;
+      tempOkAt = millis();
+      tempAlerted = false;
       return;
     }
     delay(5);
   }
+
   if (!tempAlerted && millis() - tempOkAt > TEMP_HOLD_MS) {
-    tTank = NAN; tempAlerted = true;
-    Serial.printf("DS18B20 ALERT: no good reading for %lu s (%.1f): %s\n", TEMP_HOLD_MS / 1000, v,
-                  v <= -127 ? "no answer, check the data wire and the 4.7k pull-up" : "power-on value, check the power wire");
+    tTank = NAN;
+    tempAlerted = true;
+    const char* hint = v <= -127 ? "no answer, check the data wire and the 4.7k pull-up"
+                                 : "power-on value, check the power wire";
+    Serial.printf("DS18B20 ALERT: no good reading for %lu s (%.1f): %s\n", TEMP_HOLD_MS / 1000, v, hint);
   }
 }
 
@@ -471,9 +652,11 @@ void sensorCycle() {
   } else if (phase == 2 && t >= 1800) {
     if (adsOk) {
       tdsV = readVoltsMedian(ADS_CH_TDS);
-      float tc = isnan(tTank) ? 25.0f : tTank;
-      float vc = tdsV / (1.0f + 0.02f * (tc - 25.0f));
-      tdsPpm = (133.42f * vc * vc * vc - 255.86f * vc * vc + 857.39f * vc) * 0.5f * TDS_K;
+      // Compensate to 25 C (2 % per degree), then the sensor's standard voltage-to-ppm curve
+      float waterTemp = isnan(tTank) ? 25.0f : tTank;
+      float v25 = tdsV / (1.0f + 0.02f * (waterTemp - 25.0f));
+      float curve = 133.42f * v25 * v25 * v25 - 255.86f * v25 * v25 + 857.39f * v25;
+      tdsPpm = curve * 0.5f * TDS_K;
     }
     digitalWrite(PIN_TDS_POWER, LOW);
     phase = 3;
@@ -481,9 +664,11 @@ void sensorCycle() {
     if (adsOk) {
       turbV = readVoltsMedian(ADS_CH_TURB) * DIVIDER_RATIO;
       vccV = readVoltsMedian(ADS_CH_VCC) * VCC_DIVIDER_RATIO;
+      // 0 = as clear as calibration, 100 = TURB_V_SPAN volts darker
       turbIdx = (TURB_V_CLEAR - turbV) / TURB_V_SPAN * 100.0f;
-      if (turbIdx < 0) turbIdx = 0; if (turbIdx > 100) turbIdx = 100;
-      mlClass = classifyWaterFromReadings(tdsPpm, tdsV, turbIdx, turbV, isnan(tTank) ? 25.0f : tTank);
+      turbIdx = constrain(turbIdx, 0.0f, 100.0f);
+      float waterTemp = isnan(tTank) ? 25.0f : tTank;
+      mlClass = classifyWaterFromReadings(tdsPpm, tdsV, turbIdx, turbV, waterTemp);
     }
     score = computeScore();
     runRules();

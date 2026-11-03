@@ -1,5 +1,5 @@
 import mqtt from 'mqtt';
-import { COLS, TEXT_COLS, insertReadingSql, logEvent, now, num, q, waitForDb } from './db';
+import { COLS, TEXT_COLS, insertReadingSql, logEvent, now, num, q, readSetting, waitForDb } from './db';
 import { TOPIC_BASE, broadcast, health, store, type ServerReading } from './store';
 
 const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
@@ -48,10 +48,10 @@ async function startIngest() {
   store.started = true;
 
   await waitForDb();
-  const savedLabel = await q<{ value: string }>('SELECT value FROM settings WHERE key = $1', ['label']);
-  store.currentLabel = savedLabel.rows[0]?.value || '';
-  const savedRecording = await q<{ value: string }>('SELECT value FROM settings WHERE key = $1', ['recording']);
-  store.recording = savedRecording.rows[0]?.value !== '0';
+
+  // Restore what the dashboard set before the restart
+  store.currentLabel = (await readSetting('label')) || '';
+  store.recording = (await readSetting('recording')) !== '0';   // recording is on unless turned off
 
   const client = mqtt.connect(MQTT_URL, {
     reconnectPeriod: 3000,

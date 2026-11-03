@@ -70,6 +70,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
   const [pending, setPending] = useState<Pending | null>(null);
   const [message, setMessage] = useState<Message>({ text: '', kind: '' });
 
+  // A pending command is confirmed by a new reading...
   useEffect(() => {
     if (pending && reading && pending.isDone(reading)) {
       setMessage({ text: pending.doneMessage, kind: 'ok' });
@@ -77,6 +78,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     }
   }, [reading, pending]);
 
+  // ...or by a matching event, which usually arrives first
   useEffect(() => {
     if (!pending || !latestEvent || latestEvent === pending.eventBefore) return;
     if (pending.confirmedBy(latestEvent)) {
@@ -85,6 +87,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     }
   }, [latestEvent, pending]);
 
+  // No confirmation in time: give up and tell the user
   useEffect(() => {
     if (!pending) return;
     const timer = setTimeout(() => {
@@ -94,6 +97,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     return () => clearTimeout(timer);
   }, [pending]);
 
+  // Success messages disappear after 6 s; errors stay until the next action
   useEffect(() => {
     if (!message.text || message.kind === 'error') return;
     const timer = setTimeout(() => setMessage({ text: '', kind: '' }), 6000);
@@ -106,7 +110,9 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
       await post('/api/cmd', command);
       return true;
     } catch (err) {
-      if (!(err instanceof SignedOutError)) setMessage({ text: `Could not send: ${(err as Error).message}`, kind: 'error' });
+      if (!(err instanceof SignedOutError)) {
+        setMessage({ text: `Could not send: ${(err as Error).message}`, kind: 'error' });
+      }
       return false;
     }
   }
@@ -121,7 +127,8 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
 
   // The buzzer is not reported back, so a beep is not tracked as pending
   async function beep() {
-    if (await sendCommand({ cmd: 'beep' })) setMessage({ text: 'Beep sent', kind: 'ok' });
+    const sent = await sendCommand({ cmd: 'beep' });
+    if (sent) setMessage({ text: 'Beep sent', kind: 'ok' });
   }
 
   const isPending = (key: string) => pending?.key === key;
@@ -131,19 +138,39 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
   const tankFull = Boolean(reading?.f_top);
   const tankLow = Boolean(reading?.f_bot);
 
-  const autoOn = pending?.key === 'auto' ? Boolean(pending.command.on) : Boolean(reading?.auto);
-  const demoOn = pending?.key === 'demo' ? Boolean(pending.command.on) : Boolean(reading?.demo);
+  // Pump tests only when the device is online, idle and not busy with another command
+  const canTest = !disabled && !pending && isIdle;
+  const canDrain = canTest && !tankLow;
+  const canFill = canTest && !tankFull;
+  const lowTitle = 'Bottom float reached: the tank is already low';
+  const fullTitle = 'Top float reached: the tank is already full';
+
+  // While a mode change is pending, show the switch in its new position already
+  const autoOn = isPending('auto') ? Boolean(pending?.command.on) : Boolean(reading?.auto);
+  const demoOn = isPending('demo') ? Boolean(pending?.command.on) : Boolean(reading?.demo);
+
+  // CSS class for a button: dims it while its command is pending
+  function buttonClass(key: string, extra = '') {
+    return ['btn', extra, isPending(key) ? 'is-pending' : ''].filter(Boolean).join(' ');
+  }
 
   // One plain status line: quiet when nothing runs, highlighted when something does
   function statusLine() {
     if (!reading) return { text: 'Waiting for data', active: false };
-    const running = [
-      isPending('drain') || isPending('drain_float') ? 'Starting drain pump' : reading.drain ? 'Drain pump running' : '',
-      isPending('fill') || isPending('fill_float') ? 'Starting fill pump' : reading.fill ? 'Fill pump running' : '',
-      reading.buzzer ? 'Buzzer on' : '',
-    ].filter(Boolean);
-    if (changeRunning) running.unshift(`Water change: ${reading.state}`);
-    return running.length ? { text: running.join(' · '), active: true } : { text: 'Pumps idle', active: false };
+
+    const parts: string[] = [];
+    if (changeRunning) parts.push(`Water change: ${reading.state}`);
+
+    if (isPending('drain') || isPending('drain_float')) parts.push('Starting drain pump');
+    else if (reading.drain) parts.push('Drain pump running');
+
+    if (isPending('fill') || isPending('fill_float')) parts.push('Starting fill pump');
+    else if (reading.fill) parts.push('Fill pump running');
+
+    if (reading.buzzer) parts.push('Buzzer on');
+
+    if (parts.length === 0) return { text: 'Pumps idle', active: false };
+    return { text: parts.join(' · '), active: true };
   }
 
   const status = statusLine();
@@ -167,12 +194,18 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
         <div className="control-group">
           <span className="title">Water change</span>
           <div className="row">
-            <button className={`btn ${isPending('change') ? 'is-pending' : ''}`} disabled={disabled || !!pending || changeRunning}
-              onClick={() => request(changeRequest)}>
+            <button
+              className={buttonClass('change')}
+              disabled={disabled || !!pending || changeRunning}
+              onClick={() => request(changeRequest)}
+            >
               Start water change
             </button>
-            <button className={`btn danger ${isPending('stop') ? 'is-pending' : ''}`} disabled={disabled}
-              onClick={() => request(stopRequest)}>
+            <button
+              className={buttonClass('stop', 'danger')}
+              disabled={disabled}
+              onClick={() => request(stopRequest)}
+            >
               Stop
             </button>
           </div>
@@ -182,14 +215,22 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
           <span className="title">Mode</span>
           <div className="row" style={{ gap: 24 }}>
             <label className={`switch ${isPending('auto') ? 'is-pending' : ''}`}>
-              <input type="checkbox" checked={autoOn} disabled={disabled || isPending('auto')}
-                onChange={(event) => request(modeRequest('auto', event.target.checked))} />
+              <input
+                type="checkbox"
+                checked={autoOn}
+                disabled={disabled || isPending('auto')}
+                onChange={(event) => request(modeRequest('auto', event.target.checked))}
+              />
               <i />
               Automatic water change
             </label>
             <label className={`switch ${isPending('demo') ? 'is-pending' : ''}`}>
-              <input type="checkbox" checked={demoOn} disabled={disabled || isPending('demo')}
-                onChange={(event) => request(modeRequest('demo', event.target.checked))} />
+              <input
+                type="checkbox"
+                checked={demoOn}
+                disabled={disabled || isPending('demo')}
+                onChange={(event) => request(modeRequest('demo', event.target.checked))}
+              />
               <i />
               Demo timing
             </label>
@@ -199,14 +240,20 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
         <details className="maintenance">
           <summary>Maintenance and pump tests</summary>
           <div className="row">
-            <button className={`btn ${isPending('drain') ? 'is-pending' : isIdle && reading?.drain ? 'active' : ''}`}
-              disabled={disabled || !!pending || !isIdle || tankLow} onClick={() => request(testRequest('drain'))}
-              title={tankLow ? 'Bottom float reached: the tank is already low' : undefined}>
+            <button
+              className={buttonClass('drain', isIdle && reading?.drain ? 'active' : '')}
+              disabled={!canDrain}
+              onClick={() => request(testRequest('drain'))}
+              title={tankLow ? lowTitle : undefined}
+            >
               {isPending('drain') ? 'Starting drain' : 'Run drain 3 s'}
             </button>
-            <button className={`btn ${isPending('fill') ? 'is-pending' : isIdle && reading?.fill ? 'active' : ''}`}
-              disabled={disabled || !!pending || !isIdle || tankFull} onClick={() => request(testRequest('fill'))}
-              title={tankFull ? 'Top float reached: the tank is already full' : undefined}>
+            <button
+              className={buttonClass('fill', isIdle && reading?.fill ? 'active' : '')}
+              disabled={!canFill}
+              onClick={() => request(testRequest('fill'))}
+              title={tankFull ? fullTitle : undefined}
+            >
               {isPending('fill') ? 'Starting fill' : 'Run fill 3 s'}
             </button>
             <button className="btn quiet" disabled={disabled} onClick={beep}>
@@ -214,22 +261,25 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
             </button>
           </div>
           <div className="row">
-            <button className={`btn ${isPending('drain_float') ? 'is-pending' : ''}`}
-              disabled={disabled || !!pending || !isIdle || tankLow} onClick={() => request(testRequest('drain', true))}
-              title={tankLow ? 'Bottom float reached: the tank is already low' : 'Run the drain pump until the bottom float'}>
+            <button
+              className={buttonClass('drain_float')}
+              disabled={!canDrain}
+              onClick={() => request(testRequest('drain', true))}
+              title={tankLow ? lowTitle : 'Run the drain pump until the bottom float'}
+            >
               {isPending('drain_float') ? 'Starting drain' : 'Drain to bottom float'}
             </button>
-            <button className={`btn ${isPending('fill_float') ? 'is-pending' : ''}`}
-              disabled={disabled || !!pending || !isIdle || tankFull} onClick={() => request(testRequest('fill', true))}
-              title={tankFull ? 'Top float reached: the tank is already full' : 'Run the fill pump until the top float'}>
+            <button
+              className={buttonClass('fill_float')}
+              disabled={!canFill}
+              onClick={() => request(testRequest('fill', true))}
+              title={tankFull ? fullTitle : 'Run the fill pump until the top float'}
+            >
               {isPending('fill_float') ? 'Starting fill' : 'Fill to top float'}
             </button>
           </div>
-          {isIdle && (tankFull || tankLow) && (
-            <p className="help">
-              {tankFull ? 'Fill is off: the top float says the tank is full.' : 'Drain is off: the bottom float says the tank is low.'}
-            </p>
-          )}
+          {isIdle && tankFull && <p className="help">Fill is off: the top float says the tank is full.</p>}
+          {isIdle && !tankFull && tankLow && <p className="help">Drain is off: the bottom float says the tank is low.</p>}
         </details>
 
         <div className={`feedback ${message.kind}`} role="status" aria-live="polite">
