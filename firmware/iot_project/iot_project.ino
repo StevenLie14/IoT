@@ -403,7 +403,15 @@ uint32_t tempOkAt = 0;
 bool tempAlerted = false;
 void readTemperature() {
   float v = DEVICE_DISCONNECTED_C;
-  for (int i = 0; i < 3; i++) {
+  // Not found at boot (or lost): search the bus again so a loose wire can recover without a reset
+  if (tempCount < 1) {
+    temps.begin();
+    if (temps.getDeviceCount() >= 1 && temps.getAddress(tempAddr, 0)) {
+      tempCount = 1;
+      Serial.println("DS18B20 found");
+    }
+  }
+  for (int i = 0; tempCount >= 1 && i < 3; i++) {
     v = temps.getTempC(tempAddr);
     if (v > -55 && v < 125 && v != 85.0f) {
       tTank = v; tempOkAt = millis(); tempAlerted = false;
@@ -433,7 +441,7 @@ void sensorCycle() {
     temps.requestTemperatures();
     phase = 1;
   } else if (phase == 1 && t >= 1000) {
-    if (tempCount >= 1) readTemperature();
+    readTemperature();
     digitalWrite(PIN_TDS_POWER, HIGH);
     phase = 2;
   } else if (phase == 2 && t >= 1800) {
