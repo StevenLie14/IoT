@@ -251,6 +251,9 @@ void handleCommand(const String& cmd, int arg) {
   else if (cmd == "beep")     beep(1);
   else if (cmd == "drain" || cmd == "fill") {            // manual test, stops at the floats
     if (state != IDLE) { Serial.println("Only when idle"); return; }
+    // Refuse a run that would go past a float: no fill when full, no drain when low
+    if (cmd == "fill" && floatTop()) { publishEvent("refused", "fill", 0, "top float already reached"); return; }
+    if (cmd == "drain" && floatBot()) { publishEvent("refused", "drain", 0, "bottom float already reached"); return; }
     int sec = arg > 0 ? min(arg, 30) : 3;
     manualUntil = millis() + sec * 1000UL;
     if (cmd == "drain") { manualDrain = true; setDrain(true, "manual test"); }
