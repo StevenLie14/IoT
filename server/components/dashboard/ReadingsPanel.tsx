@@ -63,7 +63,7 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
           <span className="num">{formatNumber(reading?.tds, 0)}</span>
           <span className="unit">ppm</span>
         </div>
-        <span className="sub">probe {formatNumber(reading?.tds_v, 3)} V</span>
+        <span className="sub">dissolved minerals</span>
         <RangeBar value={reading?.tds} range={RANGES.tds} level={tdsLevel} unit=" ppm" />
         <Sparkline values={recent.map((row) => row.tds)} />
       </div>
@@ -74,7 +74,7 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
           <span className="num">{formatNumber(reading?.turb, 0)}</span>
           <span className="unit">/ 100</span>
         </div>
-        <span className="sub">sensor {formatNumber(reading?.turb_v, 2)} V</span>
+        <span className="sub">0 clear · 100 dark</span>
         <RangeBar value={reading?.turb} range={RANGES.turbidity} level={turbidityLevel} />
         <Sparkline values={recent.map((row) => row.turb)} />
       </div>

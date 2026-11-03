@@ -21,7 +21,7 @@ const MAX_POINTS = 1500;
 
 function valuesFor(name: ChartName, row: Reading): (number | null)[] {
   if (name === 'score') return [row.score, row.tds];
-  if (name === 'turbidity') return [row.turb, row.turb_v];
+  if (name === 'turbidity') return [row.turb];
   if (name === 'temperature') return [row.t_tank];
   return [row.drain, row.fill];
 }
@@ -83,9 +83,8 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
   }
   if (canvases.turbidity) {
     charts.turbidity = lineChart(canvases.turbidity, [
-      { label: 'Index', borderColor: colors.warn, yAxisID: 'percent' },
-      { label: 'Sensor (V)', borderColor: colors.ink3, yAxisID: 'y', borderDash: [3, 3] },
-    ], { percent: percentAxis });
+      { label: 'Index', borderColor: colors.warn },
+    ], { y: { min: 0, max: 100, grid: { color: colors.grid }, border: { display: false }, ticks: { maxTicksLimit: 5 } } });
   }
   if (canvases.temperature) {
     charts.temperature = lineChart(canvases.temperature, [
@@ -202,8 +201,7 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
         <div className="chart">
           <h3>
             Turbidity
-            <span className="key"><i style={{ background: 'var(--warn)' }} />index</span>
-            <span className="key"><i style={{ background: 'var(--ink-3)' }} />volts</span>
+            <span className="key"><i style={{ background: 'var(--warn)' }} />index (0 clear, 100 dark)</span>
           </h3>
           {chartBox('turbidity')}
         </div>
