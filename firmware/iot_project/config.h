@@ -44,8 +44,8 @@
 #define TDS_K              1.00f    // (CAL) TDS pen ppm / firmware ppm
 #define TDS_GOOD           300.0f   // (CAL) refill-water ppm + 100
 #define TDS_BAD            700.0f   // (CAL) refill-water ppm + 400
-#define FLOAT_TOP_TRIGGERED_LEVEL LOW
-#define FLOAT_BOT_TRIGGERED_LEVEL HIGH
+#define FLOAT_TOP_TRIGGERED_LEVEL HIGH   // switch opens when the float rises (tested)
+#define FLOAT_BOT_TRIGGERED_LEVEL LOW    // same float type: closes when the float drops
 #define FLOAT_DEBOUNCE_MS  500        // a float must hold its new state this long to count
 
 // ---------- Automation ----------
