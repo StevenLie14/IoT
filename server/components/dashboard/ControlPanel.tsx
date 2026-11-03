@@ -119,6 +119,8 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
   const disabled = !deviceOnline;
   const changeRunning = WORKING_STATES.includes(reading?.state ?? '');
   const isIdle = !reading || reading.state === 'idle';
+  const tankFull = Boolean(reading?.f_top);
+  const tankLow = Boolean(reading?.f_bot);
 
   const autoOn = pending?.key === 'auto' ? Boolean(pending.command.on) : Boolean(reading?.auto);
   const demoOn = pending?.key === 'demo' ? Boolean(pending.command.on) : Boolean(reading?.demo);
@@ -202,17 +204,24 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
           <span className="title">Test</span>
           <div className="row">
             <button className={`btn ${isPending('drain') ? 'is-pending' : isIdle && reading?.drain ? 'active' : ''}`}
-              disabled={disabled || !!pending || !isIdle} onClick={() => request(testRequest('drain'))}>
+              disabled={disabled || !!pending || !isIdle || tankLow} onClick={() => request(testRequest('drain'))}
+              title={tankLow ? 'Bottom float reached: the tank is already low' : undefined}>
               {isPending('drain') ? 'Starting drain' : 'Run drain 3 s'}
             </button>
             <button className={`btn ${isPending('fill') ? 'is-pending' : isIdle && reading?.fill ? 'active' : ''}`}
-              disabled={disabled || !!pending || !isIdle} onClick={() => request(testRequest('fill'))}>
+              disabled={disabled || !!pending || !isIdle || tankFull} onClick={() => request(testRequest('fill'))}
+              title={tankFull ? 'Top float reached: the tank is already full' : undefined}>
               {isPending('fill') ? 'Starting fill' : 'Run fill 3 s'}
             </button>
             <button className="btn quiet" disabled={disabled} onClick={beep}>
               Beep
             </button>
           </div>
+          {isIdle && (tankFull || tankLow) && (
+            <p className="help">
+              {tankFull ? 'Fill is off: the top float says the tank is full.' : 'Drain is off: the bottom float says the tank is low.'}
+            </p>
+          )}
         </div>
 
         <div className={`feedback ${message.kind}`} role="status" aria-live="polite">
