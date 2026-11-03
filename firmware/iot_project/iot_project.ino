@@ -107,8 +107,22 @@ void enterState(State s, const String& detail) {
   publishEvent("state", STATE_NAMES[s], 0, detail);
 }
 
-bool floatTop() { return USE_FLOATS && digitalRead(PIN_FLOAT_TOP) == FLOAT_TOP_TRIGGERED_LEVEL; }
-bool floatBot() { return USE_FLOATS && digitalRead(PIN_FLOAT_BOT) == FLOAT_BOT_TRIGGERED_LEVEL; }
+// Float switches are debounced: a new state only counts after it has held for
+// FLOAT_DEBOUNCE_MS, so a spike from a pump or relay switching on cannot stop it.
+struct FloatInput { int pin; int triggeredLevel; bool stable; bool candidate; uint32_t since; };
+FloatInput fTop = { PIN_FLOAT_TOP, FLOAT_TOP_TRIGGERED_LEVEL, false, false, 0 };
+FloatInput fBot = { PIN_FLOAT_BOT, FLOAT_BOT_TRIGGERED_LEVEL, false, false, 0 };
+
+void updateFloat(FloatInput& f, bool first = false) {
+  bool raw = digitalRead(f.pin) == f.triggeredLevel;
+  uint32_t now = millis();
+  if (first) { f.stable = f.candidate = raw; f.since = now; return; }
+  if (raw != f.candidate) { f.candidate = raw; f.since = now; }
+  else if (raw != f.stable && now - f.since >= FLOAT_DEBOUNCE_MS) f.stable = raw;
+}
+
+bool floatTop() { return USE_FLOATS && fTop.stable; }
+bool floatBot() { return USE_FLOATS && fBot.stable; }
 
 float readVoltsMedian(int ch, int n = 11) {
   float s[16];
@@ -170,8 +184,9 @@ void runStateMachine() {
   uint32_t now = millis();
 
   // Manual test runs stop on time or at a float
-  if (manualDrain && ((int32_t)(now - manualUntil) >= 0 || floatBot())) { setDrain(false, "manual end"); manualDrain = false; }
-  if (manualFill && ((int32_t)(now - manualUntil) >= 0 || floatTop())) { setFill(false, "manual end"); manualFill = false; }
+  bool timeUp = (int32_t)(now - manualUntil) >= 0;
+  if (manualDrain && (timeUp || floatBot())) { setDrain(false, timeUp ? "manual end: time up" : "manual end: bottom float"); manualDrain = false; }
+  if (manualFill && (timeUp || floatTop())) { setFill(false, timeUp ? "manual end: time up" : "manual end: top float"); manualFill = false; }
 
   switch (state) {
     case DRAINING:   // R2: bottom float ends draining
@@ -412,7 +427,10 @@ void setup() {
   pinMode(PIN_RELAY_FILL, OUTPUT);  relay(PIN_RELAY_FILL, false);
   pinMode(PIN_BUZZER, OUTPUT); digitalWrite(PIN_BUZZER, LOW);
   pinMode(PIN_TDS_POWER, OUTPUT); digitalWrite(PIN_TDS_POWER, LOW);
-  if (USE_FLOATS) { pinMode(PIN_FLOAT_TOP, INPUT_PULLUP); pinMode(PIN_FLOAT_BOT, INPUT_PULLUP); }
+  if (USE_FLOATS) {
+    pinMode(PIN_FLOAT_TOP, INPUT_PULLUP); pinMode(PIN_FLOAT_BOT, INPUT_PULLUP);
+    updateFloat(fTop, true); updateFloat(fBot, true);
+  }
 
   Wire.begin(PIN_SDA, PIN_SCL);
   bool foundOled = false, foundAds = false;
@@ -447,6 +465,7 @@ void setup() {
 }
 
 void loop() {
+  if (USE_FLOATS) { updateFloat(fTop); updateFloat(fBot); }
   keepConnected();
   handleSerial();
   runStateMachine();
