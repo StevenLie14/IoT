@@ -331,21 +331,31 @@ void drawOled() {
   oled.display();
 }
 
-// Reads by stored address (no bus search) and retries the read a few times, because a
-// Wi-Fi interrupt can corrupt one OneWire transfer. Keeps the last good value for up to
-// 5 failed cycles (15 s) and says why a read failed.
+// Reads by stored address (no bus search) and retries the read a few times.
+// Failed reads are skipped: the last good value is kept for up to TEMP_HOLD_MS, since
+// tank temperature changes slowly. Only the first failure of a streak and the moment
+// the value runs out are logged, so Serial stays readable.
 int tempFails = 0;
+uint32_t tempOkAt = 0;
 void readTemperature() {
   float v = DEVICE_DISCONNECTED_C;
   for (int i = 0; i < 3; i++) {
     v = temps.getTempC(tempAddr);
-    if (v > -55 && v < 125 && v != 85.0f) { tTank = v; tempFails = 0; return; }
+    if (v > -55 && v < 125 && v != 85.0f) {
+      if (tempFails > 0) Serial.printf("DS18B20 back after %d failed reads\n", tempFails);
+      tTank = v; tempFails = 0; tempOkAt = millis();
+      return;
+    }
     delay(5);
   }
   tempFails++;
-  Serial.printf("DS18B20 read failed (%.1f): %s\n", v,
-                v <= -127 ? "no answer, check the data wire and the 4.7k pull-up" : "power-on value, check the power wire");
-  if (tempFails > 5) tTank = NAN;
+  if (tempFails == 1)
+    Serial.printf("DS18B20 read failed (%.1f): %s\n", v,
+                  v <= -127 ? "no answer, check the data wire and the 4.7k pull-up" : "power-on value, check the power wire");
+  if (!isnan(tTank) && millis() - tempOkAt > TEMP_HOLD_MS) {
+    tTank = NAN;
+    Serial.printf("DS18B20: no good reading for %lu s, t_tank is now null\n", TEMP_HOLD_MS / 1000);
+  }
 }
 
 // ---------------- Sensor cycle (non-blocking) ----------------

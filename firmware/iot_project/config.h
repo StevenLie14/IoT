@@ -51,3 +51,4 @@
 #define COOLDOWN_MS       1800000UL   // 30 min (60 s in demo mode)
 #define SETTLE_MS            3000UL   // pause between drain and fill
 #define CYCLE_MS             3000UL   // sensor cycle and publish interval
+#define TEMP_HOLD_MS        60000UL   // keep the last good temperature this long when reads fail
