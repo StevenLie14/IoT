@@ -32,13 +32,14 @@ const changeRequest: Pending = {
   doneMessage: 'Water change is running',
 };
 
-function testRequest(pump: 'drain' | 'fill'): Pending {
+function testRequest(pump: 'drain' | 'fill', toFloat = false): Pending {
+  const target = pump === 'drain' ? 'the bottom float' : 'the top float';
   return {
-    key: pump,
-    command: { cmd: pump, sec: 3 },
+    key: toFloat ? `${pump}_float` : pump,
+    command: toFloat ? { cmd: `${pump}_float` } : { cmd: pump, sec: 3 },
     isDone: (reading) => reading[pump] === 1,
     confirmedBy: (event) => event.type === 'actuator' && event.name === pump && event.value === 1,
-    doneMessage: pump === 'drain' ? 'Drain pump is running' : 'Fill pump is running',
+    doneMessage: `${pump === 'drain' ? 'Drain' : 'Fill'} pump is running${toFloat ? ` until ${target}` : ''}`,
   };
 }
 
@@ -215,6 +216,18 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
             </button>
             <button className="btn quiet" disabled={disabled} onClick={beep}>
               Beep
+            </button>
+          </div>
+          <div className="row">
+            <button className={`btn ${isPending('drain_float') ? 'is-pending' : ''}`}
+              disabled={disabled || !!pending || !isIdle || tankLow} onClick={() => request(testRequest('drain', true))}
+              title={tankLow ? 'Bottom float reached: the tank is already low' : 'Run the drain pump until the bottom float'}>
+              {isPending('drain_float') ? 'Starting drain' : 'Drain to bottom float'}
+            </button>
+            <button className={`btn ${isPending('fill_float') ? 'is-pending' : ''}`}
+              disabled={disabled || !!pending || !isIdle || tankFull} onClick={() => request(testRequest('fill', true))}
+              title={tankFull ? 'Top float reached: the tank is already full' : 'Run the fill pump until the top float'}>
+              {isPending('fill_float') ? 'Starting fill' : 'Fill to top float'}
             </button>
           </div>
           {isIdle && (tankFull || tankLow) && (
