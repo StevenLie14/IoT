@@ -53,6 +53,7 @@ uint32_t stateSince = 0, cooldownUntil = 0;
 
 // Manual test run (commands "drain N" / "fill N")
 bool manualDrain = false, manualFill = false;
+bool manualToFloat = false;   // manual run that goes on until its float, limited by the pump timeout
 uint32_t manualUntil = 0;
 
 // Actuator outputs
@@ -196,8 +197,13 @@ void runStateMachine() {
 
   // Manual test runs stop on time or at a float
   bool timeUp = (int32_t)(now - manualUntil) >= 0;
+  if (manualToFloat && timeUp && (manualDrain || manualFill)) {   // never reached the float
+    pumpFault(manualDrain ? "drain timeout" : "fill timeout");
+    manualToFloat = false;
+  }
   if (manualDrain && (timeUp || floatBot())) { setDrain(false, timeUp ? "manual end: time up" : "manual end: bottom float"); manualDrain = false; }
   if (manualFill && (timeUp || floatTop())) { setFill(false, timeUp ? "manual end: time up" : "manual end: top float"); manualFill = false; }
+  if (!manualDrain && !manualFill) manualToFloat = false;
 
   switch (state) {
     case DRAINING:   // R2: bottom float ends draining
@@ -249,15 +255,22 @@ void handleCommand(const String& cmd, int arg) {
   else if (cmd == "auto")     { autoMode = arg != 0; publishEvent("mode", "auto", autoMode, ""); }
   else if (cmd == "demo")     { demoMode = arg != 0; publishEvent("mode", "demo", demoMode, ""); }
   else if (cmd == "beep")     beep(1);
-  else if (cmd == "drain" || cmd == "fill") {            // manual test, stops at the floats
+  else if (cmd == "drain" || cmd == "fill" || cmd == "drain_float" || cmd == "fill_float") {
+    // drain / fill: timed test (default 3 s, max 30 s). drain_float / fill_float: run until the
+    // float, limited by DRAIN_TIMEOUT_MS / FILL_TIMEOUT_MS. All of them stop at the floats.
     if (state != IDLE) { Serial.println("Only when idle"); return; }
+    if (manualDrain || manualFill) { Serial.println("A pump test is already running"); return; }
+    bool drain = cmd.startsWith("drain");
+    bool toFloat = cmd.endsWith("_float");
     // Refuse a run that would go past a float: no fill when full, no drain when low
-    if (cmd == "fill" && floatTop()) { publishEvent("refused", "fill", 0, "top float already reached"); return; }
-    if (cmd == "drain" && floatBot()) { publishEvent("refused", "drain", 0, "bottom float already reached"); return; }
-    int sec = arg > 0 ? min(arg, 30) : 3;
-    manualUntil = millis() + sec * 1000UL;
-    if (cmd == "drain") { manualDrain = true; setDrain(true, "manual test"); }
-    else                { manualFill = true;  setFill(true, "manual test"); }
+    if (!drain && floatTop()) { publishEvent("refused", "fill", 0, "top float already reached"); return; }
+    if (drain && floatBot()) { publishEvent("refused", "drain", 0, "bottom float already reached"); return; }
+    uint32_t ms = toFloat ? (drain ? DRAIN_TIMEOUT_MS : FILL_TIMEOUT_MS) : (arg > 0 ? min(arg, 30) : 3) * 1000UL;
+    manualUntil = millis() + ms;
+    manualToFloat = toFloat;
+    const char* why = toFloat ? (drain ? "manual: drain to bottom float" : "manual: fill to top float") : "manual test";
+    if (drain) { manualDrain = true; setDrain(true, why); }
+    else       { manualFill = true;  setFill(true, why); }
   }
   else Serial.printf("Unknown command: %s\n", cmd.c_str());
 }
@@ -485,7 +498,7 @@ void setup() {
   mqtt.setBufferSize(1024);
   mqtt.setCallback(onMqtt);
 
-  Serial.println("Commands: change | stop | auto on/off | demo on/off | beep | drain 3 | fill 3");
+  Serial.println("Commands: change | stop | auto on/off | demo on/off | beep | drain 3 | fill 3 | drain_float | fill_float");
   cycleStart = millis();
 }
 
