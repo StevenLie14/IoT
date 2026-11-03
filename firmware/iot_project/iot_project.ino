@@ -47,7 +47,7 @@ int   mlClass = -1;      // on-device water-condition prediction (-1 = no model)
 enum State { IDLE, DRAINING, SETTLING, FILLING };
 const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling"};
 State state = IDLE;
-bool autoMode = true, demoMode = false;
+bool autoMode = AUTO_ON_BOOT, demoMode = false;
 int lowCount = 0;
 uint32_t stateSince = 0, cooldownUntil = 0;
 
@@ -180,6 +180,17 @@ void finishChange(const char* why) {
   lowCount = 0;
 }
 
+// A pump ran too long without reaching its float (float stuck, pump dry, leak).
+// Everything stops and auto mode is switched off until someone checks the tank.
+void pumpFault(const char* what) {
+  setDrain(false, what); setFill(false, what);
+  manualDrain = manualFill = false;
+  beep(5);
+  publishEvent("fault", what, 0, "pumps stopped, auto mode off");
+  if (autoMode) { autoMode = false; publishEvent("mode", "auto", 0, "off after fault"); }
+  enterState(IDLE, what);
+}
+
 void runStateMachine() {
   uint32_t now = millis();
 
@@ -190,6 +201,7 @@ void runStateMachine() {
 
   switch (state) {
     case DRAINING:   // R2: bottom float ends draining
+      if (now - stateSince >= DRAIN_TIMEOUT_MS) { pumpFault("drain timeout"); break; }
       if (floatBot()) {
         setDrain(false, "bottom float");
         enterState(SETTLING, "bottom float reached");
@@ -203,6 +215,7 @@ void runStateMachine() {
       }
       break;
     case FILLING:    // R3: top float ends the refill
+      if (now - stateSince >= FILL_TIMEOUT_MS) { pumpFault("fill timeout"); break; }
       if (floatTop()) finishChange("top float");
       break;
     default: break;
@@ -210,7 +223,16 @@ void runStateMachine() {
 }
 
 // R1: called once per sensor cycle after the score is updated
+bool turbFault = false;
 void runRules() {
+  // A turbidity reading near 0 V means the signal wire is off or the sensor has no power,
+  // not dirty water, so R1 must not drain the tank on it
+  if (turbV < TURB_V_FAULT) {
+    if (!turbFault) publishEvent("fault", "turbidity", turbV, "sensor reads near 0 V, R1 paused");
+    turbFault = true; lowCount = 0;
+    return;
+  }
+  turbFault = false;
   if (score < SCORE_THRESHOLD) lowCount++; else lowCount = 0;
   bool cooling = (int32_t)(millis() - cooldownUntil) < 0;
   if (autoMode && state == IDLE && !cooling && lowCount >= LOW_READINGS_TO_ACT) {
