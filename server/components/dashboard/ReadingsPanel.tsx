@@ -77,13 +77,15 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
         <span className="sub">{pumpText(reading)}</span>
       </div>
 
-      <div className={`reading model ${prediction?.prediction ?? ''}`}>
-        <span className="label">Condition (model)</span>
-        <div className="value">
-          <span className="word">{prediction ? LABEL_NAMES[prediction.prediction] ?? prediction.prediction : '--'}</span>
+      {prediction && (
+        <div className={`reading model ${prediction.prediction}`}>
+          <span className="label">Condition (model)</span>
+          <div className="value">
+            <span className="word">{LABEL_NAMES[prediction.prediction] ?? prediction.prediction}</span>
+          </div>
+          <span className="sub">{predictionText(prediction)}</span>
         </div>
-        <span className="sub">{prediction ? predictionText(prediction) : 'no model loaded'}</span>
-      </div>
+      )}
     </div>
   );
 }
