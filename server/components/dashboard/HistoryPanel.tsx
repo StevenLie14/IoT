@@ -29,6 +29,7 @@ function valuesFor(name: ChartName, row: Reading): (number | null)[] {
 function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
   const colors = {
     ink: cssVar('--ink'),
+    panel: cssVar('--panel'),
     ink2: cssVar('--ink-2'),
     ink3: cssVar('--ink-3'),
     grid: cssVar('--line-2'),
@@ -56,7 +57,11 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
         interaction: { mode: 'index', intersect: false },
         plugins: {
           legend: { display: false },
-          tooltip: { backgroundColor: colors.ink, padding: 8, cornerRadius: 4, boxPadding: 4 },
+          tooltip: {
+            // Inverted colours so the tooltip reads well in both themes
+            backgroundColor: colors.ink, titleColor: colors.panel, bodyColor: colors.panel,
+            padding: 8, cornerRadius: 4, boxPadding: 4,
+          },
         },
         scales: {
           x: { grid: { display: false }, border: { color: colors.grid }, ticks: { maxTicksLimit: 6, maxRotation: 0, autoSkipPadding: 24 } },
