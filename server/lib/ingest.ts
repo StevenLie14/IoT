@@ -10,9 +10,14 @@ async function saveReading(message: Record<string, unknown>, source: string) {
   const epoch = now();
   const values = COLS.map((column) => (TEXT_COLS.has(column) ? message[column] ?? null : num(message[column])));
   const label = store.currentLabel || null;
-  const result = await q<{ id: number }>(insertReadingSql, [epoch, num(message.ts), ...values, label, source]);
+  // While recording is paused the reading is still shown live but not stored
+  let id = 0;
+  if (store.recording) {
+    const result = await q<{ id: number }>(insertReadingSql, [epoch, num(message.ts), ...values, label, source]);
+    id = result.rows[0].id;
+  }
 
-  const reading: ServerReading = { id: result.rows[0].id, epoch, device_ts: num(message.ts), label, source };
+  const reading: ServerReading = { id, epoch, device_ts: num(message.ts), label, source, stored: store.recording ? 1 : 0 };
   COLS.forEach((column, index) => {
     reading[column] = values[index] as number | string | null;
   });
@@ -42,6 +47,8 @@ async function startIngest() {
   await waitForDb();
   const savedLabel = await q<{ value: string }>('SELECT value FROM settings WHERE key = $1', ['label']);
   store.currentLabel = savedLabel.rows[0]?.value || '';
+  const savedRecording = await q<{ value: string }>('SELECT value FROM settings WHERE key = $1', ['recording']);
+  store.recording = savedRecording.rows[0]?.value !== '0';
 
   const client = mqtt.connect(MQTT_URL, {
     reconnectPeriod: 3000,

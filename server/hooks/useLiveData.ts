@@ -40,6 +40,14 @@ export function useLiveData() {
     setReading(next);
     setLastReadingAt(Date.now());
     setRecent((list) => [...list, next].slice(-MAX_RECENT));
+    // Keep the record count live instead of waiting for the next stats refresh
+    if (next.stored !== 0) {
+      setStats((current) => {
+        if (!current) return current;
+        const key = next.source === 'sim' ? 'sim' : 'device';
+        return { ...current, n: current.n + 1, [key]: current[key] + 1, first: current.first ?? next.epoch };
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -87,7 +95,7 @@ export function useLiveData() {
       refreshStats().catch(() => {});
     });
 
-    const statsTimer = setInterval(() => refreshStats().catch(() => {}), 15000);
+    const statsTimer = setInterval(() => refreshStats().catch(() => {}), 60000);
 
     return () => {
       cancelled = true;

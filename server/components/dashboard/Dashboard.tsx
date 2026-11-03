@@ -24,11 +24,14 @@ export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
     live.setHealth((current) => (current ? { ...current, label } : current));
   }
 
+  function saveRecording(recording: boolean) {
+    live.setHealth((current) => (current ? { ...current, recording } : current));
+  }
+
   return (
     <>
       <TopBar
         health={health}
-        reading={reading}
         lastReadingAt={live.lastReadingAt}
         canSignOut={authEnabled}
         theme={theme.choice}
@@ -49,7 +52,8 @@ export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
             latestEvent={live.events[0] ?? null}
             deviceOnline={health?.device === 'online'}
           />
-          <DatasetPanel stats={live.stats} label={health?.label ?? ''} onLabelSaved={saveLabel} />
+          <DatasetPanel stats={live.stats} label={health?.label ?? ''} recording={health?.recording ?? true}
+            onLabelSaved={saveLabel} onRecordingSaved={saveRecording} />
         </section>
 
         <HistoryPanel key={`${theme.resolved}-${live.resetCount}`} latest={reading} />

@@ -18,6 +18,7 @@ export type Reading = {
   auto: number | null;
   demo: number | null;
   ml: string | null;
+  stored?: number;
 };
 
 export type Health = {
@@ -25,6 +26,7 @@ export type Health = {
   device: string;
   dataFresh: boolean;
   label: string;
+  recording: boolean;
 };
 
 export type Prediction = {

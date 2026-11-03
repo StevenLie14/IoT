@@ -9,6 +9,7 @@ type Store = {
   mqttUp: boolean;
   lastDataAt: number;
   currentLabel: string;
+  recording: boolean;
   listeners: Set<Listener>;
   started: boolean;
   publish?: (topic: string, payload: string) => void;
@@ -24,6 +25,7 @@ if (!globalForStore.iotProjectStore) {
     mqttUp: false,
     lastDataAt: 0,
     currentLabel: '',
+    recording: true,
     listeners: new Set(),
     started: false,
   };
@@ -39,6 +41,7 @@ export function health() {
     device: store.deviceStatus,
     dataFresh: Date.now() - store.lastDataAt < 15000,
     label: store.currentLabel,
+    recording: store.recording,
     topic: TOPIC_BASE,
   };
 }
