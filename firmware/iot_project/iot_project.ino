@@ -33,6 +33,7 @@ PubSubClient mqtt(netClient);
 
 bool oledOk = false, adsOk = false;
 int tempCount = 0;
+DeviceAddress tempAddr;
 
 // ---------------- Latest readings ----------------
 float tTank = NAN;
@@ -330,11 +331,17 @@ void drawOled() {
   oled.display();
 }
 
-// Keeps the last good value for up to 5 failed reads (10 s) and says why a read failed
+// Reads by stored address (no bus search) and retries the read a few times, because a
+// Wi-Fi interrupt can corrupt one OneWire transfer. Keeps the last good value for up to
+// 5 failed cycles (10 s) and says why a read failed.
 int tempFails = 0;
 void readTemperature() {
-  float v = temps.getTempCByIndex(0);
-  if (v > -55 && v < 125 && v != 85.0f) { tTank = v; tempFails = 0; return; }
+  float v = DEVICE_DISCONNECTED_C;
+  for (int i = 0; i < 3; i++) {
+    v = temps.getTempC(tempAddr);
+    if (v > -55 && v < 125 && v != 85.0f) { tTank = v; tempFails = 0; return; }
+    delay(5);
+  }
   tempFails++;
   Serial.printf("DS18B20 read failed (%.1f): %s\n", v,
                 v <= -127 ? "no answer, check the data wire and the 4.7k pull-up" : "power-on value, check the power wire");
@@ -404,6 +411,7 @@ void setup() {
   temps.begin();
   temps.setWaitForConversion(false);
   tempCount = temps.getDeviceCount();
+  if (tempCount >= 1 && !temps.getAddress(tempAddr, 0)) tempCount = 0;
   Serial.printf("OLED %s, ADS %s, DS18B20: %d\n", oledOk ? "OK" : "FAIL", adsOk ? "OK" : "FAIL", tempCount);
 
   WiFi.mode(WIFI_STA);
