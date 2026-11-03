@@ -349,18 +349,24 @@ void readTemperature() {
 }
 
 // ---------------- Sensor cycle (non-blocking) ----------------
-// 0 s TDS power on + start temperature conversion
-// 1 s read temperatures and TDS, TDS power off
-// 1.5 s read turbidity, compute score, run rules
+// The DS18B20 is measured and read while the TDS board is off, because TDS current
+// in the water can disturb the temperature sensor in the same tank.
+// 0 s   TDS power off, start temperature conversion
+// 1 s   read temperature, then TDS power on
+// 1.8 s read TDS (0.8 s settle), TDS power off
+// 1.9 s read turbidity, compute score, run rules
 // 3 s (CYCLE_MS) publish
 void sensorCycle() {
   uint32_t t = millis() - cycleStart;
   if (phase == 0) {
-    digitalWrite(PIN_TDS_POWER, HIGH);
+    digitalWrite(PIN_TDS_POWER, LOW);
     temps.requestTemperatures();
     phase = 1;
   } else if (phase == 1 && t >= 1000) {
     if (tempCount >= 1) readTemperature();
+    digitalWrite(PIN_TDS_POWER, HIGH);
+    phase = 2;
+  } else if (phase == 2 && t >= 1800) {
     if (adsOk) {
       tdsV = readVoltsMedian(ADS_CH_TDS);
       float tc = isnan(tTank) ? 25.0f : tTank;
@@ -368,8 +374,8 @@ void sensorCycle() {
       tdsPpm = (133.42f * vc * vc * vc - 255.86f * vc * vc + 857.39f * vc) * 0.5f * TDS_K;
     }
     digitalWrite(PIN_TDS_POWER, LOW);
-    phase = 2;
-  } else if (phase == 2 && t >= 1500) {
+    phase = 3;
+  } else if (phase == 3 && t >= 1900) {
     if (adsOk) {
       turbV = readVoltsMedian(ADS_CH_TURB) * DIVIDER_RATIO;
       turbIdx = (TURB_V_CLEAR - turbV) / TURB_V_SPAN * 100.0f;
@@ -378,8 +384,8 @@ void sensorCycle() {
     }
     score = computeScore();
     runRules();
-    phase = 3;
-  } else if (phase == 3 && t >= CYCLE_MS) {
+    phase = 4;
+  } else if (phase == 4 && t >= CYCLE_MS) {
     publishData();
     drawOled();
     cycleStart = millis();
