@@ -16,6 +16,8 @@ const LABEL_OPTIONS = ['', 'clear', 'slightly_turbid', 'dirty'];
 
 export default function DatasetPanel({ stats, label, onLabelSaved }: Props) {
   const [message, setMessage] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const deviceRows = stats?.device ?? 0;
   const progress = Math.min(100, (deviceRows / TARGET_ROWS) * 100);
 
@@ -30,6 +32,19 @@ export default function DatasetPanel({ stats, label, onLabelSaved }: Props) {
       setMessage(next ? `New readings are labelled "${LABEL_NAMES[next]}"` : 'Labelling is off');
     } catch (err) {
       setMessage(`Could not save the label: ${(err as Error).message}`);
+    }
+  }
+
+  async function resetAll() {
+    setResetting(true);
+    try {
+      const result = await post<{ ok: boolean; readings: number; events: number }>('/api/reset', { confirm: 'RESET' });
+      setMessage(`Deleted ${result.readings.toLocaleString()} readings and ${result.events.toLocaleString()} events`);
+    } catch (err) {
+      setMessage(`Could not reset: ${(err as Error).message}`);
+    } finally {
+      setResetting(false);
+      setConfirming(false);
     }
   }
 
@@ -73,6 +88,25 @@ export default function DatasetPanel({ stats, label, onLabelSaved }: Props) {
           <a href="/api/export.csv?source=device">Device CSV</a>
           <a href="/api/export.csv">All rows</a>
           <a href="/api/events.csv">Event log CSV</a>
+        </div>
+
+        <div className="control-group reset">
+          {!confirming ? (
+            <button className="btn danger" onClick={() => setConfirming(true)}>Reset all data</button>
+          ) : (
+            <>
+              <p className="help">
+                Delete all {(stats?.n ?? 0).toLocaleString()} readings and {(stats?.events ?? 0).toLocaleString()} events?
+                This cannot be undone. Download the CSV files above first if you need them.
+              </p>
+              <div className="row">
+                <button className="btn danger" disabled={resetting} onClick={resetAll}>
+                  {resetting ? 'Deleting…' : 'Yes, delete everything'}
+                </button>
+                <button className="btn quiet" disabled={resetting} onClick={() => setConfirming(false)}>Cancel</button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

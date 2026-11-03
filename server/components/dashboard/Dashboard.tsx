@@ -52,7 +52,7 @@ export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
           <DatasetPanel stats={live.stats} label={health?.label ?? ''} onLabelSaved={saveLabel} />
         </section>
 
-        <HistoryPanel key={theme.resolved} latest={reading} />
+        <HistoryPanel key={`${theme.resolved}-${live.resetCount}`} latest={reading} />
         <EventLog events={live.events} />
       </main>
     </>

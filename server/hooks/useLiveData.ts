@@ -30,6 +30,7 @@ export function useLiveData() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [events, setEvents] = useState<LogEvent[]>([]);
   const [error, setError] = useState('');
+  const [resetCount, setResetCount] = useState(0);
 
   const refreshStats = useCallback(async () => {
     setStats(await api<Stats>('/api/stats'));
@@ -76,6 +77,16 @@ export function useLiveData() {
       setEvents((list) => [event, ...list].slice(0, MAX_EVENTS));
     });
 
+    stream.addEventListener('reset', () => {
+      setReading(null);
+      setRecent([]);
+      setLastReadingAt(0);
+      setEvents([]);
+      setResetCount((count) => count + 1);
+      api<LogEvent[]>('/api/events?limit=100').then(setEvents).catch(() => {});
+      refreshStats().catch(() => {});
+    });
+
     const statsTimer = setInterval(() => refreshStats().catch(() => {}), 15000);
 
     return () => {
@@ -99,5 +110,6 @@ export function useLiveData() {
     stats,
     events,
     error,
+    resetCount,
   };
 }

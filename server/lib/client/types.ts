@@ -34,6 +34,8 @@ export type Prediction = {
 };
 
 export type Stats = {
+  n: number;
+  events: number;
   device: number;
   sim: number;
   first: number | null;
