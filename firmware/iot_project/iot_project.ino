@@ -273,11 +273,13 @@ void keepConnected() {
   mqtt.loop();
 }
 
+// Readings without a temperature are skipped (not sent to MQTT or Serial)
 void publishData() {
+  if (isnan(tTank)) return;
   JsonDocument doc;
   doc["ts"] = epochNow();
   doc["src"] = "device";
-  if (isnan(tTank)) doc["t_tank"] = nullptr; else doc["t_tank"] = roundf(tTank * 100) / 100;
+  doc["t_tank"] = roundf(tTank * 100) / 100;
   doc["tds"] = roundf(tdsPpm * 10) / 10;
   doc["tds_v"] = roundf(tdsV * 1000) / 1000;
   doc["turb"] = roundf(turbIdx * 10) / 10;
