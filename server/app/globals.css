@@ -147,6 +147,9 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-
 .reading canvas { width: 100%; height: 30px; margin-top: 6px; display: block; }
 .reading.warn .value .num { color: var(--warn); }
 .reading.bad .value .num { color: var(--bad); }
+.reading.bad .value .word { color: var(--bad); }
+.reading .floats { display: grid; gap: 2px; margin-top: 6px; }
+.reading .floats .on { color: var(--accent); }
 .range { margin-top: 10px; }
 .range-track { position: relative; height: 10px; }
 .range-track::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: var(--line); }

@@ -16,11 +16,21 @@ function pumpText(reading: Reading | null) {
   return 'pumps idle';
 }
 
+function floatsConflict(reading: Reading | null) {
+  return Boolean(reading?.f_top && reading?.f_bot);
+}
+
 function levelText(reading: Reading | null) {
   if (!reading) return '--';
+  if (floatsConflict(reading)) return 'check floats';
   if (reading.f_top) return 'full';
   if (reading.f_bot) return 'low';
   return 'normal';
+}
+
+function floatText(value: number | null | undefined) {
+  if (value === null || value === undefined) return '--';
+  return value ? 'triggered' : 'open';
 }
 
 function predictionText(prediction: Prediction) {
@@ -69,12 +79,19 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
         <Sparkline values={recent.map((row) => row.turb)} />
       </div>
 
-      <div className="reading">
+      <div className={`reading ${floatsConflict(reading) ? 'bad' : ''}`}>
         <span className="label">Water level</span>
         <div className="value">
           <span className="word">{levelText(reading)}</span>
         </div>
         <span className="sub">{pumpText(reading)}</span>
+        <span className="sub floats">
+          <span className={reading?.f_top ? 'on' : ''}>Top float: {floatText(reading?.f_top)}</span>
+          <span className={reading?.f_bot ? 'on' : ''}>Bottom float: {floatText(reading?.f_bot)}</span>
+        </span>
+        {floatsConflict(reading) && (
+          <span className="sub">Both floats read triggered at once: check the wiring or the signal direction in config.h</span>
+        )}
       </div>
 
       {prediction && (
