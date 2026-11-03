@@ -49,7 +49,7 @@ PubSubClient (Nick O'Leary), ArduinoJson (Benoit Blanchon, versi 7).
 4. Upload, buka Serial Monitor 115200, akhir baris **Newline**.
 
 **Pin** (sama dengan sketch tes terakhir): OLED/ADS1115 SDA D21, SCL D22 · DS18B20 D4 · daya TDS D13 ·
-TDS → ADS A0 · turbidity → pembagi 10k/20k → ADS A1 · relay pompa buang D26, pompa isi D25 · buzzer D33 · float atas D19, float bawah D18 (kabel lain ke GND).
+TDS → ADS A0 · turbidity → pembagi 10k/20k → ADS A1 · relay pompa buang D26, pompa isi D25 · buzzer D33 · float atas D18, float bawah D19 (kabel lain ke GND).
 Cek arah float di Serial Monitor: kalau terbalik, ganti `FLOAT_TOP_TRIGGERED_LEVEL` / `FLOAT_BOT_TRIGGERED_LEVEL`.
 
 **Perintah Serial** (juga bisa dari dashboard):
