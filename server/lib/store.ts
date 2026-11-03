@@ -2,6 +2,7 @@ export type ServerReading = Record<string, number | string | null> & { id: numbe
 export type LaptopPrediction = { prediction: string; confidence?: number | null; model?: string; epoch: number };
 type Listener = (event: string, data: unknown) => void;
 
+// In-memory state shared by the MQTT ingest and every API route (latest reading, status, SSE listeners)
 type Store = {
   latest: ServerReading | null;
   latestMl: LaptopPrediction | null;
@@ -35,6 +36,7 @@ export const store = globalForStore.iotProjectStore;
 
 export const TOPIC_BASE = process.env.TOPIC_BASE || 'iot-project/steven-2802941592';
 
+// Connection and recording status shown in the dashboard's Health panel
 export function health() {
   return {
     mqtt: store.mqttUp,
@@ -46,6 +48,7 @@ export function health() {
   };
 }
 
+// Pushes an event to every open dashboard through the SSE stream
 export function broadcast(event: string, data: unknown) {
   for (const listener of store.listeners) listener(event, data);
 }

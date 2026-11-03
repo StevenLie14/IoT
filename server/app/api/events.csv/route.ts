@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 const HEADER = ['id', 'epoch', 'device_ts', 'type', 'name', 'value', 'detail', 'source'];
 
+// Downloads the whole event log as CSV
 export async function GET(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;

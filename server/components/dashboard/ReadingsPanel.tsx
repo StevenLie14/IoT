@@ -10,16 +10,19 @@ type Props = {
   prediction: Prediction | null;
 };
 
+// What the pumps are doing, in words
 function pumpText(reading: Reading | null) {
   if (reading?.drain) return 'draining to the bottom float';
   if (reading?.fill) return 'refilling to the top float';
   return 'pumps idle';
 }
 
+// Both floats triggered at once is impossible in a real tank, so a float or its wiring is wrong
 function floatsConflict(reading: Reading | null) {
   return Boolean(reading?.f_top && reading?.f_bot);
 }
 
+// Water level derived from the two floats
 function levelText(reading: Reading | null) {
   if (!reading) return '--';
   if (floatsConflict(reading)) return 'check floats';
@@ -28,17 +31,20 @@ function levelText(reading: Reading | null) {
   return 'normal';
 }
 
+// State of one float switch
 function floatText(value: number | null | undefined) {
   if (value === null || value === undefined) return '--';
   return value ? 'triggered' : 'open';
 }
 
+// Which model made the prediction, plus its confidence when known
 function predictionText(prediction: Prediction) {
   const hasConfidence = prediction.confidence !== undefined && prediction.confidence !== null;
   if (!hasConfidence) return prediction.source;
   return `${prediction.source} · ${Math.round(prediction.confidence! * 100)}%`;
 }
 
+// Sensor cards (temperature, TDS, turbidity), water level and the ML prediction
 export default function ReadingsPanel({ reading, recent, prediction }: Props) {
   const temperatureLevel = levelFor(reading?.t_tank, RANGES.temperature);
   const tdsLevel = levelFor(reading?.tds, RANGES.tds);

@@ -6,6 +6,7 @@ import LoginForm from '@/components/LoginForm';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Sign in · Water Quality Monitor' };
 
+// Login page; skipped when login is off or the browser is already signed in
 export default async function LoginPage() {
   if (!authEnabled() || (await isSignedIn())) redirect('/');
   return (

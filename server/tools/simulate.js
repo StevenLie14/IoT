@@ -2,6 +2,7 @@ const mqtt = require('mqtt');
 const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 const TOPIC_BASE = process.env.TOPIC_BASE || 'iot-project/steven-2802941592';
 const args = process.argv.slice(2);
+// Reads a numeric command-line option, e.g. --interval 1000
 const opt = (name, def) => (args.includes(name) ? Number(args[args.indexOf(name) + 1]) || def : def);
 const INTERVAL = opt('--interval', 3000);
 const SPEED = opt('--speed', 1);
@@ -15,17 +16,22 @@ const c = mqtt.connect(MQTT_URL, {
   username: process.env.MQTT_USER || undefined,
   password: process.env.MQTT_PASSWORD || undefined,
   will: { topic: `${TOPIC_BASE}/status`, payload: 'offline', retain: true } });
+// Publishes to TOPIC_BASE/<sub>; only the online/offline status is retained
 const pub = (sub, obj) => c.publish(`${TOPIC_BASE}/${sub}`, typeof obj === 'string' ? obj : JSON.stringify(obj), { retain: sub === 'status' });
 const ts = () => Math.floor(Date.now() / 1000);
+// Sends a simulator event in the same format as the firmware
 const event = (type, name, value, detail) => pub('event', { ts: ts(), src: 'sim', type, name, value, detail });
+// 100 at the good value, 0 at the bad value, linear in between (same as the firmware)
 const lin = (v, g, b) => 100 * (1 - Math.min(Math.max((v - g) / (b - g), 0), 1));
 
+// Same weighted health score as computeScore() in the firmware
 function score(turbIdx) {
   const sT = lin(tds, TDS_GOOD, TDS_BAD), sU = 100 - turbIdx;
   const sC = temp >= 24 && temp <= 30 ? 100 : temp < 24 ? lin(temp, 24, 20) : lin(temp, 30, 34);
   return Math.round(0.5 * sT + 0.375 * sU + 0.125 * sC);
 }
 
+// Starts a simulated water change (drain, then refill)
 function startChange(why) {
   if (state !== 'idle') return;
   state = 'draining'; drain = 1; event('state', 'draining', 0, why); event('actuator', 'drain', 1, why);
@@ -36,6 +42,7 @@ c.on('connect', () => {
   pub('status', 'online');
   c.subscribe(`${TOPIC_BASE}/cmd`);
 });
+// Handles dashboard commands like the real device does
 c.on('message', (t, b) => {
   let m; try { m = JSON.parse(b.toString()); } catch { return; }
   if (m.cmd === 'change') startChange('manual change');
@@ -54,6 +61,8 @@ c.on('message', (t, b) => {
   }
 });
 
+// Every tick: water slowly gets dirtier, the tank level follows the pumps, R1 is checked,
+// and one reading is published
 setInterval(() => {
   const dt = INTERVAL / 1000 * SPEED;
   dirt = Math.min(dirt + 0.004 * dt * (1 + Math.random()), 1);

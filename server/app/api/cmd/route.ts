@@ -3,6 +3,7 @@ import { logEvent, now, num } from '@/lib/db';
 import { TOPIC_BASE, store } from '@/lib/store';
 export const dynamic = 'force-dynamic';
 const ALLOWED = ['change', 'stop', 'auto', 'demo', 'beep', 'drain', 'fill', 'drain_float', 'fill_float'];
+// Forwards a dashboard command to the ESP32 over MQTT (only commands in ALLOWED) and logs it
 export async function POST(req: Request) {
   const denied = await requireAuth(req); if (denied) return denied;
   const body = await req.json().catch(() => ({}));

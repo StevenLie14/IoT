@@ -14,6 +14,7 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// Checks the login form and sets the session cookie; too many failures lock the IP out
 export async function POST(request: Request) {
   if (!authEnabled()) return Response.json({ ok: true });
 

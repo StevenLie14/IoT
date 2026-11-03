@@ -13,6 +13,7 @@ type LatestResponse = {
 const MAX_EVENTS = 200;
 const MAX_RECENT = 60;
 
+// Prediction posted by ml/predict_live.py, in the shape the dashboard shows
 function laptopPrediction(ml: NonNullable<LatestResponse['ml']>): Prediction {
   return {
     prediction: ml.prediction,
@@ -21,6 +22,7 @@ function laptopPrediction(ml: NonNullable<LatestResponse['ml']>): Prediction {
   };
 }
 
+// All live dashboard data: loads the current state once, then follows the server's SSE stream
 export function useLiveData() {
   const [reading, setReading] = useState<Reading | null>(null);
   const [recent, setRecent] = useState<Reading[]>([]);
@@ -32,10 +34,12 @@ export function useLiveData() {
   const [error, setError] = useState('');
   const [resetCount, setResetCount] = useState(0);
 
+  // Re-fetches the dataset counts from the database
   const refreshStats = useCallback(async () => {
     setStats(await api<Stats>('/api/stats'));
   }, []);
 
+  // Handles a new reading from the stream
   const addReading = useCallback((next: Reading) => {
     setReading(next);
     setLastReadingAt(Date.now());
@@ -53,6 +57,7 @@ export function useLiveData() {
   useEffect(() => {
     let cancelled = false;
 
+    // Latest reading, last 10 minutes of history, recent events and dataset counts
     async function loadInitialData() {
       try {
         const latest = await api<LatestResponse>('/api/latest');
@@ -76,6 +81,7 @@ export function useLiveData() {
 
     loadInitialData();
 
+    // Live updates pushed by the server
     const stream = new EventSource('/api/stream');
     stream.addEventListener('reading', (message) => addReading(JSON.parse(message.data)));
     stream.addEventListener('health', (message) => setHealth(JSON.parse(message.data)));
@@ -85,6 +91,7 @@ export function useLiveData() {
       setEvents((list) => [event, ...list].slice(0, MAX_EVENTS));
     });
 
+    // All data was deleted: clear everything on screen and reload
     stream.addEventListener('reset', () => {
       setReading(null);
       setRecent([]);
@@ -104,6 +111,7 @@ export function useLiveData() {
     };
   }, [addReading, refreshStats]);
 
+  // The ESP32's own decision tree wins over the laptop model when both are present
   const deviceModel: Prediction | null = reading?.ml
     ? { prediction: reading.ml, source: 'decision tree on ESP32' }
     : null;

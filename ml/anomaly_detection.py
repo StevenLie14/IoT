@@ -27,6 +27,7 @@ STUCK_ROWS = 60                                                         # 2 minu
 
 
 def main():
+    """Runs the rule checks and the Isolation Forest, then saves the flagged rows and a plot."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--csv", required=True)
     ap.add_argument("--contamination", type=float, default=0.02, help="expected share of anomalies for Isolation Forest")

@@ -15,12 +15,14 @@ type Props = {
 
 const LABEL_OPTIONS = ['', 'clear', 'slightly_turbid', 'dirty'];
 
+// Dataset tools: record on/off, label for new readings, CSV downloads, delete all data
 export default function DatasetPanel({ stats, label, recording, onLabelSaved, onRecordingSaved }: Props) {
   const [message, setMessage] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [resetting, setResetting] = useState(false);
   const deviceRows = stats?.device ?? 0;
 
+  // Saves the label for new readings
   async function chooseLabel(next: string) {
     onLabelSaved(next);
     try {
@@ -31,6 +33,7 @@ export default function DatasetPanel({ stats, label, recording, onLabelSaved, on
     }
   }
 
+  // Pauses or resumes storing readings; the switch is put back if the request fails
   async function setRecording(next: boolean) {
     onRecordingSaved(next);
     try {
@@ -42,6 +45,7 @@ export default function DatasetPanel({ stats, label, recording, onLabelSaved, on
     }
   }
 
+  // Deletes every reading and event after the user confirmed
   async function resetAll() {
     setResetting(true);
     try {

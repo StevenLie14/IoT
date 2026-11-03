@@ -1,12 +1,14 @@
 import { formatTime } from '@/lib/client/format';
 import type { LogEvent } from '@/lib/client/types';
 
+// One readable line from an event's name, value and detail
 function describe(event: LogEvent) {
   return [event.name, event.value, event.detail]
     .filter((part) => part !== null && part !== undefined && part !== '')
     .join(' · ');
 }
 
+// Table of the most recent device and server events
 export default function EventLog({ events }: { events: LogEvent[] }) {
   return (
     <section className="panel">

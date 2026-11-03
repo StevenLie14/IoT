@@ -26,6 +26,7 @@ DEFAULT_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fi
 
 
 def tree_to_c(clf, features, indent="  "):
+    """Turns a trained sklearn decision tree into nested C if-else statements (returns the lines)."""
     t = clf.tree_
     lines = []
 
@@ -49,6 +50,7 @@ def tree_to_c(clf, features, indent="  "):
 
 
 def main():
+    """Trains the tree, prints its accuracy and writes firmware/iot_project/water_model.h."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--csv", required=True)
     ap.add_argument("--features", nargs="+", default=["tds", "turb"])

@@ -66,14 +66,19 @@ int beepsLeft = 0; bool beepPhase = false; uint32_t beepNext = 0;
 uint32_t cycleStart = 0; int phase = 0;
 
 // ---------------- Helpers ----------------
+// Full MQTT topic for a sub-topic, e.g. topic("data") -> TOPIC_BASE/data
 String topic(const char* sub) { return String(TOPIC_BASE) + "/" + sub; }
+// Wait after a water change before R1 may start another one (shorter in demo mode)
 uint32_t cooldownMs() { return demoMode ? 60000UL : COOLDOWN_MS; }
+// Unix time from NTP, or 0 while the clock is not set yet
 uint32_t epochNow() { time_t t = time(nullptr); return t > 1600000000 ? (uint32_t)t : 0; }
 
+// Switches a relay, hiding whether the board is active-low or active-high
 void relay(int pin, bool on) {
   digitalWrite(pin, (RELAY_ACTIVE_LOW ? !on : on) ? HIGH : LOW);
 }
 
+// Sends one event (state change, pump on/off, fault, ...) to MQTT and prints it on Serial
 void publishEvent(const char* type, const char* name, float value, const String& detail) {
   JsonDocument doc;
   doc["ts"] = epochNow();
@@ -89,6 +94,7 @@ void publishEvent(const char* type, const char* name, float value, const String&
 
 uint32_t pumpChangedAt = 0;   // last time a pump switched on or off (see PUMP_QUIET_MS)
 
+// Turns the drain pump on/off and logs why. Never runs together with the fill pump.
 void setDrain(bool on, const char* why) {
   if (on == drainOn) return;
   pumpChangedAt = millis();
@@ -97,6 +103,7 @@ void setDrain(bool on, const char* why) {
   publishEvent("actuator", "drain", on ? 1 : 0, why);
 }
 
+// Turns the fill pump on/off and logs why. Never runs together with the drain pump.
 void setFill(bool on, const char* why) {
   if (on == fillOn) return;
   pumpChangedAt = millis();
@@ -105,8 +112,10 @@ void setFill(bool on, const char* why) {
   publishEvent("actuator", "fill", on ? 1 : 0, why);
 }
 
+// Queues n short beeps; updateBuzzer() plays them without blocking
 void beep(int n) { beepsLeft = n; beepPhase = false; beepNext = millis(); }
 
+// Moves the water-change state machine to a new state and logs it
 void enterState(State s, const String& detail) {
   state = s; stateSince = millis();
   publishEvent("state", STATE_NAMES[s], 0, detail);
@@ -118,6 +127,7 @@ struct FloatInput { int pin; int triggeredLevel; bool stable; bool candidate; ui
 FloatInput fTop = { PIN_FLOAT_TOP, FLOAT_TOP_TRIGGERED_LEVEL, false, false, 0 };
 FloatInput fBot = { PIN_FLOAT_BOT, FLOAT_BOT_TRIGGERED_LEVEL, false, false, 0 };
 
+// Reads one float pin and updates its debounced state (first = take the raw value at boot)
 void updateFloat(FloatInput& f, bool first = false) {
   bool raw = digitalRead(f.pin) == f.triggeredLevel;
   uint32_t now = millis();
@@ -126,9 +136,11 @@ void updateFloat(FloatInput& f, bool first = false) {
   else if (raw != f.stable && now - f.since >= FLOAT_DEBOUNCE_MS) f.stable = raw;
 }
 
+// true when the tank is full (top float) / low (bottom float)
 bool floatTop() { return USE_FLOATS && fTop.stable; }
 bool floatBot() { return USE_FLOATS && fBot.stable; }
 
+// Reads an ADS1115 channel n times and returns the median, which ignores single noisy samples
 float readVoltsMedian(int ch, int n = 11) {
   float s[16];
   if (n > 16) n = 16;
@@ -148,6 +160,7 @@ float lin(float v, float good, float bad) {   // 100 at good, 0 at bad, linear b
 }
 
 // ---------------- Score ----------------
+// Water health score 0-100: weighted mix of TDS, turbidity and temperature
 int computeScore() {
   float wSum = 0, sum = 0;
   // TDS (0.5)
@@ -164,6 +177,7 @@ int computeScore() {
 }
 
 // ---------------- Water change ----------------
+// Starts a full water change: drain to the bottom float, settle, refill to the top float
 void startChange(const char* reason) {
   if (state != IDLE) { Serial.println("Change already running"); return; }
   manualDrain = manualFill = false;
@@ -172,12 +186,14 @@ void startChange(const char* reason) {
   setDrain(true, reason);
 }
 
+// Emergency stop: both pumps off, manual tests cancelled, back to idle
 void stopAll(const char* why) {
   setDrain(false, why); setFill(false, why);
   manualDrain = manualFill = false;
   if (state != IDLE) enterState(IDLE, why);
 }
 
+// Ends a water change and starts the cooldown so R1 cannot fire again right away
 void finishChange(const char* why) {
   setFill(false, why);
   cooldownUntil = millis() + cooldownMs();   // R3
@@ -196,6 +212,7 @@ void pumpFault(const char* what) {
   enterState(IDLE, what);
 }
 
+// Called every loop: ends manual pump tests and moves the water change through its states
 void runStateMachine() {
   uint32_t now = millis();
 
@@ -256,6 +273,7 @@ void runRules() {
 }
 
 // ---------------- Commands (MQTT JSON and Serial text) ----------------
+// Runs one command, from the dashboard (MQTT) or typed in the Serial Monitor
 void handleCommand(const String& cmd, int arg) {
   if (cmd == "change")        startChange("manual change");
   else if (cmd == "stop")     stopAll("stop command");
@@ -282,6 +300,7 @@ void handleCommand(const String& cmd, int arg) {
   else Serial.printf("Unknown command: %s\n", cmd.c_str());
 }
 
+// MQTT callback for the cmd topic: parses the JSON and passes it to handleCommand()
 void onMqtt(char* t, byte* payload, unsigned int len) {
   JsonDocument doc;
   if (deserializeJson(doc, payload, len)) return;
@@ -290,6 +309,7 @@ void onMqtt(char* t, byte* payload, unsigned int len) {
   handleCommand(cmd, arg);
 }
 
+// Collects a line typed in the Serial Monitor, e.g. "drain 3", and runs it as a command
 void handleSerial() {
   static String line;
   while (Serial.available()) {
@@ -311,6 +331,7 @@ void handleSerial() {
 // ---------------- Network ----------------
 uint32_t lastWifiTry = 0, lastMqttTry = 0;
 
+// Keeps Wi-Fi and MQTT connected, retrying in the background without blocking the loop
 void keepConnected() {
   if (WiFi.status() != WL_CONNECTED) {
     if (millis() - lastWifiTry > 10000) { lastWifiTry = millis(); WiFi.disconnect(); WiFi.begin(WIFI_SSID, WIFI_PASS); }
@@ -334,6 +355,7 @@ void keepConnected() {
   mqtt.loop();
 }
 
+// Sends the latest readings as one JSON message to MQTT and Serial.
 // Readings without a temperature are skipped (not sent to MQTT or Serial)
 void publishData() {
   if (isnan(tTank)) return;
@@ -362,6 +384,7 @@ void publishData() {
 }
 
 // ---------------- Outputs ----------------
+// Plays the queued beeps (150 ms on/off) without blocking
 void updateBuzzer() {
   uint32_t now = millis();
   if (beepsLeft > 0 && (int32_t)(now - beepNext) >= 0) {
@@ -373,6 +396,7 @@ void updateBuzzer() {
   digitalWrite(PIN_BUZZER, b);
 }
 
+// Redraws the OLED: connection, mode, state, score and the latest readings
 void drawOled() {
   if (!oledOk) return;
   oled.clearDisplay();
@@ -473,6 +497,7 @@ void sensorCycle() {
 }
 
 // ---------------- Setup / loop ----------------
+// Runs once at power-on: pins, I2C sensors, DS18B20, Wi-Fi, NTP and MQTT
 void setup() {
   Serial.begin(115200);
   delay(300);
@@ -517,6 +542,7 @@ void setup() {
   cycleStart = millis();
 }
 
+// Main loop: everything here is non-blocking so floats and commands react immediately
 void loop() {
   if (USE_FLOATS) { updateFloat(fTop); updateFloat(fBot); }
   keepConnected();

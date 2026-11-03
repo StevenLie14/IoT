@@ -10,6 +10,8 @@ type Props = {
   deviceOnline: boolean;
 };
 
+// A command waiting for the ESP32 to confirm it, either by a new reading (isDone)
+// or by a matching event (confirmedBy), within RESPONSE_TIMEOUT_MS
 type Pending = {
   key: string;
   command: Command;
@@ -32,6 +34,7 @@ const changeRequest: Pending = {
   doneMessage: 'Water change is running',
 };
 
+// Manual pump test: 3 s run, or until the float when toFloat is true
 function testRequest(pump: 'drain' | 'fill', toFloat = false): Pending {
   const target = pump === 'drain' ? 'the bottom float' : 'the top float';
   return {
@@ -43,6 +46,7 @@ function testRequest(pump: 'drain' | 'fill', toFloat = false): Pending {
   };
 }
 
+// Turns automatic water change or demo timing on/off
 function modeRequest(mode: 'auto' | 'demo', on: boolean): Pending {
   return {
     key: mode,
@@ -61,6 +65,7 @@ const stopRequest: Pending = {
   doneMessage: 'Pumps stopped',
 };
 
+// Device controls: water change, stop, modes, and the maintenance pump tests
 export default function ControlPanel({ reading, latestEvent, deviceOnline }: Props) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [message, setMessage] = useState<Message>({ text: '', kind: '' });
@@ -95,6 +100,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     return () => clearTimeout(timer);
   }, [message]);
 
+  // Sends a command through /api/cmd; returns false and shows an error if it fails
   async function sendCommand(command: Command) {
     try {
       await post('/api/cmd', command);
@@ -105,6 +111,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     }
   }
 
+  // Sends a command and waits for the device to confirm it (see Pending)
   async function request(next: Pending) {
     setPending({ ...next, eventBefore: latestEvent });
     setMessage({ text: 'Sent. Waiting for the ESP32...', kind: '' });
@@ -112,6 +119,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     if (!sent) setPending(null);
   }
 
+  // The buzzer is not reported back, so a beep is not tracked as pending
   async function beep() {
     if (await sendCommand({ cmd: 'beep' })) setMessage({ text: 'Beep sent', kind: 'ok' });
   }

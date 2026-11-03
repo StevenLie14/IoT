@@ -20,6 +20,7 @@ import requests
 
 
 def main():
+    """Polls the newest reading, predicts its label and posts it to /api/ml until stopped."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--server", default="http://localhost:3000")
     ap.add_argument("--model", default="models/water_condition_model.joblib")

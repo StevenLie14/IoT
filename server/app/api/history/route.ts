@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth';
 import { now, q } from '@/lib/db';
 export const dynamic = 'force-dynamic';
+// Readings of the last ?minutes= for the history chart, thinned to about 1500 points
 export async function GET(req: Request) {
   const denied = await requireAuth(req); if (denied) return denied;
   const minutes = Math.min(Math.max(Number(new URL(req.url).searchParams.get('minutes')) || 30, 1), 60 * 24 * 30);

@@ -11,15 +11,18 @@ import { useLiveData } from '@/hooks/useLiveData';
 import { useTheme } from '@/hooks/useTheme';
 import type { LogEvent } from '@/lib/client/types';
 
+// Newest event that marks a finished water change, for the Health panel
 function findLastChange(events: LogEvent[]) {
   return events.find((event) => event.type === 'state' && String(event.detail ?? '').startsWith('change done')) ?? null;
 }
 
+// The whole dashboard page: loads live data and lays out the panels
 export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
   const live = useLiveData();
   const theme = useTheme();
   const { reading, health } = live;
 
+  // Update the label/recording state on screen right away instead of waiting for the next health update
   function saveLabel(label: string) {
     live.setHealth((current) => (current ? { ...current, label } : current));
   }

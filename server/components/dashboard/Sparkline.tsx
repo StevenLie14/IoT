@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { cssVar } from '@/lib/client/format';
 
+// Small trend line of recent values, drawn on a canvas
 export default function Sparkline({ values }: { values: (number | null)[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 

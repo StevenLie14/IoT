@@ -39,6 +39,7 @@ LABEL_ORDER = ["clear", "slightly_turbid", "dirty"]
 
 
 def load(path, features, include_sim):
+    """Reads the dashboard CSV and keeps only labelled device readings taken while no pump runs."""
     df = pd.read_csv(path)
     missing = [c for c in features + ["label", "timestamp_wib"] if c not in df.columns]
     if missing:
@@ -66,6 +67,7 @@ def time_split(df, test_frac):
 
 
 def main():
+    """Trains and compares the models, then saves the best one with its metrics and plots."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--csv", required=True, help="dataset CSV exported from the dashboard")
     ap.add_argument("--features", nargs="+", default=["tds", "turb"])

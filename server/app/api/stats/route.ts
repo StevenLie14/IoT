@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth';
 import { q } from '@/lib/db';
 export const dynamic = 'force-dynamic';
+// Dataset counts for the Dataset panel: rows per source, rows per label, number of events
 export async function GET(req: Request) {
   const denied = await requireAuth(req); if (denied) return denied;
   const { rows: [r] } = await q(`SELECT COUNT(*) AS n, MIN(epoch) AS first, MAX(epoch) AS last,

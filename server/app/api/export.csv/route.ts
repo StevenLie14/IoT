@@ -9,6 +9,7 @@ const DATA_COLUMNS = [
   'score', 'state', 'drain', 'fill', 'buzzer', 'auto', 'demo', 'label',
 ];
 
+// Downloads the readings as the dataset CSV used by the ML scripts (?source=device by default)
 export async function GET(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;

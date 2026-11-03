@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// Username/password form; on success it goes to the dashboard
 export default function LoginForm() {
   const router = useRouter();
   const [username, setUsername] = useState('');
@@ -9,6 +10,7 @@ export default function LoginForm() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Posts the credentials to /api/login and shows the server's error if it fails
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError('');

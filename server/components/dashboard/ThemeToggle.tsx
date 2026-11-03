@@ -6,6 +6,7 @@ import type { ThemeChoice } from '@/hooks/useTheme';
 const NEXT: Record<ThemeChoice, ThemeChoice> = { system: 'light', light: 'dark', dark: 'system' };
 const NAME: Record<ThemeChoice, string> = { system: 'Auto', light: 'Light', dark: 'Dark' };
 
+// Icon for the current theme: half-filled circle (auto), sun (light), moon (dark)
 function Icon({ choice }: { choice: ThemeChoice }) {
   if (choice === 'light') {
     return (
@@ -35,6 +36,7 @@ type Props = {
   onChange: (choice: ThemeChoice) => void;
 };
 
+// One button that cycles the theme: auto -> light -> dark
 export default function ThemeToggle({ choice, onChange }: Props) {
   const label = `Theme: ${NAME[choice]} (click for ${NAME[NEXT[choice]]})`;
   return (
