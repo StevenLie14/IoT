@@ -37,7 +37,7 @@
 
 // ---------- Calibration (CAL) ----------
 #define DIVIDER_RATIO      1.5f     // 10k / 20k divider on the turbidity output
-#define TURB_V_CLEAR       3.87f    // (CAL) turbidity sensor voltage in clean water
+#define TURB_V_CLEAR       2.93f    // (CAL) turbidity sensor voltage in clean water
 #define TURB_V_SPAN        1.5f     // volts darker than clear = index 100
 #define TDS_K              1.00f    // (CAL) TDS pen ppm / firmware ppm
 #define TDS_GOOD           300.0f   // (CAL) refill-water ppm + 100
