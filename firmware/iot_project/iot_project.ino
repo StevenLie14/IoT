@@ -330,6 +330,17 @@ void drawOled() {
   oled.display();
 }
 
+// Keeps the last good value for up to 5 failed reads (10 s) and says why a read failed
+int tempFails = 0;
+void readTemperature() {
+  float v = temps.getTempCByIndex(0);
+  if (v > -55 && v < 125 && v != 85.0f) { tTank = v; tempFails = 0; return; }
+  tempFails++;
+  Serial.printf("DS18B20 read failed (%.1f): %s\n", v,
+                v <= -127 ? "no answer, check the data wire and the 4.7k pull-up" : "power-on value, check the power wire");
+  if (tempFails > 5) tTank = NAN;
+}
+
 // ---------------- Sensor cycle (non-blocking) ----------------
 // 0 s TDS power on + start temperature conversion
 // 1 s read temperatures and TDS, TDS power off
@@ -342,7 +353,7 @@ void sensorCycle() {
     temps.requestTemperatures();
     phase = 1;
   } else if (phase == 1 && t >= 1000) {
-    if (tempCount >= 1) { float v = temps.getTempCByIndex(0); tTank = (v > -55 && v < 125 && v != 85.0f) ? v : NAN; }
+    if (tempCount >= 1) readTemperature();
     if (adsOk) {
       tdsV = readVoltsMedian(ADS_CH_TDS);
       float tc = isnan(tTank) ? 25.0f : tTank;
