@@ -87,8 +87,11 @@ void publishEvent(const char* type, const char* name, float value, const String&
   Serial.printf("[event] %s %s %.2f %s\n", type, name, value, detail.c_str());
 }
 
+uint32_t pumpChangedAt = 0;   // last time a pump switched on or off (see PUMP_QUIET_MS)
+
 void setDrain(bool on, const char* why) {
   if (on == drainOn) return;
+  pumpChangedAt = millis();
   if (on && fillOn) { fillOn = false; relay(PIN_RELAY_FILL, false); }
   drainOn = on; relay(PIN_RELAY_DRAIN, on);
   publishEvent("actuator", "drain", on ? 1 : 0, why);
@@ -96,6 +99,7 @@ void setDrain(bool on, const char* why) {
 
 void setFill(bool on, const char* why) {
   if (on == fillOn) return;
+  pumpChangedAt = millis();
   if (on && drainOn) { drainOn = false; relay(PIN_RELAY_DRAIN, false); }
   fillOn = on; relay(PIN_RELAY_FILL, on);
   publishEvent("actuator", "fill", on ? 1 : 0, why);
@@ -239,6 +243,9 @@ void runRules() {
     return;
   }
   turbFault = false;
+  // A running pump sags the 5 V supply and stirs the water, so readings taken while a pump
+  // runs, or within PUMP_QUIET_MS after it stops, do not count toward R1
+  if (drainOn || fillOn || millis() - pumpChangedAt < PUMP_QUIET_MS) { lowCount = 0; return; }
   if (score < SCORE_THRESHOLD) lowCount++; else lowCount = 0;
   bool cooling = (int32_t)(millis() - cooldownUntil) < 0;
   if (autoMode && state == IDLE && !cooling && lowCount >= LOW_READINGS_TO_ACT) {
