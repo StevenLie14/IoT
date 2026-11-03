@@ -1,5 +1,5 @@
 // IoT Project - main firmware (ESP32)
-// Sensing -> score -> rule-based water change -> MQTT JSON every 2 s.
+// Sensing -> score -> rule-based water change -> MQTT JSON every 3 s.
 // Libraries: Adafruit SSD1306 (+GFX, BusIO), Adafruit ADS1X15, OneWire,
 //            DallasTemperature, PubSubClient, ArduinoJson (7.x)
 // All settings are in config.h.
@@ -333,7 +333,7 @@ void drawOled() {
 
 // Reads by stored address (no bus search) and retries the read a few times, because a
 // Wi-Fi interrupt can corrupt one OneWire transfer. Keeps the last good value for up to
-// 5 failed cycles (10 s) and says why a read failed.
+// 5 failed cycles (15 s) and says why a read failed.
 int tempFails = 0;
 void readTemperature() {
   float v = DEVICE_DISCONNECTED_C;
@@ -352,7 +352,7 @@ void readTemperature() {
 // 0 s TDS power on + start temperature conversion
 // 1 s read temperatures and TDS, TDS power off
 // 1.5 s read turbidity, compute score, run rules
-// 2 s publish
+// 3 s (CYCLE_MS) publish
 void sensorCycle() {
   uint32_t t = millis() - cycleStart;
   if (phase == 0) {

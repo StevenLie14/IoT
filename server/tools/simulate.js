@@ -3,7 +3,7 @@ const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 const TOPIC_BASE = process.env.TOPIC_BASE || 'iot-project/steven-2802941592';
 const args = process.argv.slice(2);
 const opt = (name, def) => (args.includes(name) ? Number(args[args.indexOf(name) + 1]) || def : def);
-const INTERVAL = opt('--interval', 2000);
+const INTERVAL = opt('--interval', 3000);
 const SPEED = opt('--speed', 1);
 
 const TURB_V_CLEAR = 3.87, TDS_GOOD = 300, TDS_BAD = 700, LEVEL_PER_SEC = 0.003, LOW_LEVEL = 0.75;
