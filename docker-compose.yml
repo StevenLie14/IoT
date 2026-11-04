@@ -36,9 +36,9 @@ services:
       - POSTGRES_USER=${DB_USER:-iot_project}
       - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - POSTGRES_DB=${DB_NAME:-iot_project}
-    # Only reachable from the server itself; use an SSH tunnel to reach it from a laptop
+    # Open to the internet on port 5433 (5432 is taken by another Postgres on the server)
     ports:
-      - "127.0.0.1:5433:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
