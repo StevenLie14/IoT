@@ -30,6 +30,10 @@ iot/
 | Penyimpanan terus-menerus | PostgreSQL: tabel `readings` dan `events` |
 | Dashboard | Nilai live, status aktuator, grafik riwayat, tombol kontrol, log event. Ada juga dashboard Node-RED di `nodered/` |
 | Dataset minimal 1.000 baris | Ekspor CSV dari dashboard. 1.000 baris = sekitar 33 menit logging |
+| Model AI terintegrasi, prediksi real-time | Random Forest (10 tree) jalan langsung di ESP32 tiap 3 detik, dikirim sebagai `ml` dan `ml_conf` lewat MQTT |
+| Dashboard: prediksi, confidence, tren, aktuator | Kartu "Condition (model)" dengan confidence, grafik "Model prediction" di History, "Last automatic trigger", status pompa. Node-RED punya grup "AI model" yang sama |
+| Aktuator dikontrol AI | Aturan R4: model bilang `dirty` (minimal 60% tree setuju) lima kali berturut-turut → buzzer 3 beep, ganti air otomatis. Bisa dimatikan dengan `ML_RULE_ENABLED` di `config.h` |
+| Evaluasi dan perbandingan dengan rule-based | Notebook bagian 11: metrik AI (R4) vs rule-based (R1), simulasi trigger pompa, dan uji ketahanan saat tegangan turbidity turun |
 
 ## 1. Firmware ESP32
 
@@ -88,7 +92,7 @@ Kalau Wi-Fi kampus memblokir MQTT (port 1883), pakai hotspot HP untuk ESP32 dan 
 
 ## 2b. Dashboard Node-RED
 
-Flow di `nodered/flows.json` subscribe ke `TOPIC_BASE/data` dan `/status` di broker.hivemq.com, lalu menampilkan gauge (skor, TDS, turbidity, suhu), status pompa, grafik 1 jam terakhir, dan tombol perintah (ganti air, stop, tes buzzer, mode auto) yang dikirim ke `TOPIC_BASE/cmd`. Firmware tidak perlu diubah, dan bisa jalan bersamaan dengan dashboard Next.js.
+Flow di `nodered/flows.json` subscribe ke `TOPIC_BASE/data`, `/status`, dan `/event` di broker.hivemq.com, lalu menampilkan gauge (skor, TDS, turbidity, suhu), status pompa, grafik 1 jam terakhir, grup "AI model" (prediksi, confidence, grafik prediksi, dan trigger otomatis terakhir dari `/event`), dan tombol perintah (ganti air, stop, tes buzzer, mode auto) yang dikirim ke `TOPIC_BASE/cmd`. Firmware tidak perlu diubah, dan bisa jalan bersamaan dengan dashboard Next.js.
 
 Butuh Node.js 18 atau lebih baru:
 
@@ -146,7 +150,9 @@ Skrip ini melatih Random Forest kecil (10 tree, kedalaman maksimal 3, fitur `tds
 akurasi di data uji (split waktu 80/20), lalu memakai [micromlgen](https://github.com/eloquentarduino/micromlgen)
 untuk menulis `firmware/iot_project/water_model.h`: tiap tree jadi `if-else` dan hasilnya di-voting (satu suara per tree). Jumlah tree dan kedalaman bisa diubah dengan `--trees` dan `--depth`. Upload ulang firmware.
 ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY) dan mengirimnya sebagai field `ml` di data MQTT,
-sehingga muncul di kartu prediksi pada dashboard dan tersimpan di kolom `ml` database.
+bersama `ml_conf` (bagian tree yang setuju, 0 sampai 1), sehingga muncul di kartu prediksi dan grafik tren pada dashboard
+dan tersimpan di kolom `ml` / `ml_conf` database. Kalau mode auto nyala, prediksi `dirty` lima kali berturut-turut
+memicu ganti air (aturan R4), di samping aturan skor R1.
 
 **Isi CSV dataset** (`/api/export.csv`, hanya data dari ESP32): `timestamp_wib`, `t_tank`, `tds`, `tds_v`, `turb`, `turb_v`, `label`.
 Baris saat pompa jalan dan 5 detik sesudahnya tidak ikut diekspor (terganggu gelembung). Data simulator: `?source=sim`.

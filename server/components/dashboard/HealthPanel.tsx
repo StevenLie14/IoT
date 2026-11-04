@@ -4,16 +4,24 @@ import type { LogEvent, Reading } from '@/lib/client/types';
 type Props = {
   reading: Reading | null;
   lastChange: LogEvent | null;
+  lastTrigger: LogEvent | null;
 };
 
 // Big health score with its meter, auto mode and the time of the last water change
-export default function HealthPanel({ reading, lastChange }: Props) {
+export default function HealthPanel({ reading, lastChange, lastTrigger }: Props) {
   const score = reading?.score ?? null;
   const hasScore = score !== null;
   const meterWidth = hasScore ? Math.min(100, Math.max(0, score)) : 0;
 
   let autoText = '--';
-  if (reading) autoText = reading.auto ? 'On' : 'Off';
+  if (reading) autoText = reading.auto ? 'On (score rule + AI model)' : 'Off';
+
+  // Which rule started the latest automatic change: R1 = health score, R4 = the AI model
+  let triggerText = '--';
+  if (lastTrigger) {
+    const who = lastTrigger.name === 'R4' ? 'AI model (R4)' : `Score rule (${lastTrigger.name})`;
+    triggerText = `${who}, ${formatTime(lastTrigger.epoch)}`;
+  }
 
   let lastChangeText = '--';
   if (lastChange) lastChangeText = formatTime(lastChange.epoch);
@@ -44,6 +52,8 @@ export default function HealthPanel({ reading, lastChange }: Props) {
           <dd>{autoText}</dd>
           <dt>Last water change</dt>
           <dd>{lastChangeText}</dd>
+          <dt>Last automatic trigger</dt>
+          <dd>{triggerText}</dd>
           {reading?.source === 'sim' && (<><dt>Source</dt><dd>Simulator</dd></>)}
         </dl>
       </div>

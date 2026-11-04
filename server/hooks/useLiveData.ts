@@ -100,7 +100,7 @@ export function useLiveData() {
 
   // Water condition predicted by the model running on the ESP32
   const prediction: Prediction | null = reading?.ml
-    ? { prediction: reading.ml, source: 'random forest on ESP32' }
+    ? { prediction: reading.ml, confidence: reading.ml_conf ?? null, source: 'random forest on ESP32' }
     : null;
 
   return {

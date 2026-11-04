@@ -174,8 +174,8 @@
     "type": "function",
     "z": "flow_main",
     "name": "split reading",
-    "func": "const d = msg.payload || {};\nconst onOff = (v) => (v ? 'ON' : 'off');\nconst temp = d.t_tank === null || d.t_tank === undefined ? null : d.t_tank;\nconst level = d.f_top ? 'full (top float)' : d.f_bot ? 'low (bottom float)' : 'between floats';\nreturn [\n  { payload: d.score },\n  { payload: d.tds },\n  { payload: d.turb },\n  temp === null ? null : { payload: temp },\n  { payload: d.state },\n  { payload: onOff(d.drain) },\n  { payload: onOff(d.fill) },\n  { payload: level },\n  { payload: d.auto === 1 },\n  { topic: 'TDS (ppm)', payload: d.tds },\n  { topic: 'Score', payload: d.score },\n];",
-    "outputs": 11,
+    "func": "const d = msg.payload || {};\nconst onOff = (v) => (v ? 'ON' : 'off');\nconst temp = d.t_tank === null || d.t_tank === undefined ? null : d.t_tank;\nconst ML_NAMES = { clear: 'Clear', slightly_turbid: 'Slightly turbid', dirty: 'Dirty' };\nconst ML_LEVEL = { clear: 0, slightly_turbid: 1, dirty: 2 };   // for the trend chart\nconst hasMl = d.ml !== undefined && d.ml !== null;\nconst conf = typeof d.ml_conf === 'number' ? Math.round(d.ml_conf * 100) : null;\nconst level = d.f_top ? 'full (top float)' : d.f_bot ? 'low (bottom float)' : 'between floats';\nreturn [\n  { payload: d.score },\n  { payload: d.tds },\n  { payload: d.turb },\n  temp === null ? null : { payload: temp },\n  { payload: d.state },\n  { payload: onOff(d.drain) },\n  { payload: onOff(d.fill) },\n  { payload: level },\n  { payload: d.auto === 1 },\n  { topic: 'TDS (ppm)', payload: d.tds },\n  { topic: 'Score', payload: d.score },\n  hasMl ? { payload: ML_NAMES[d.ml] || d.ml } : null,\n  conf === null ? null : { payload: conf + ' %' },\n  hasMl ? { topic: 'Prediction (0 clear, 1 slightly turbid, 2 dirty)', payload: ML_LEVEL[d.ml] } : null,\n];",
+    "outputs": 14,
     "timeout": 0,
     "noerr": 0,
     "initialize": "",
@@ -216,6 +216,15 @@
       ],
       [
         "ch_score"
+      ],
+      [
+        "t_ml"
+      ],
+      [
+        "t_ml_conf"
+      ],
+      [
+        "ch_ml"
       ]
     ]
   },
@@ -830,5 +839,184 @@
     "x": 620,
     "y": 700,
     "wires": []
+  },
+  {
+    "id": "g_ml",
+    "type": "ui-group",
+    "name": "AI model (Random Forest on ESP32)",
+    "page": "page",
+    "width": "4",
+    "height": "1",
+    "order": 5,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "t_ml",
+    "type": "ui-text",
+    "z": "flow_main",
+    "group": "g_ml",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "name": "Prediction",
+    "label": "Prediction",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#222222",
+    "wrapText": false,
+    "className": "",
+    "x": 640,
+    "y": 780,
+    "wires": []
+  },
+  {
+    "id": "t_ml_conf",
+    "type": "ui-text",
+    "z": "flow_main",
+    "group": "g_ml",
+    "order": 2,
+    "width": 0,
+    "height": 0,
+    "name": "Confidence",
+    "label": "Confidence",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#222222",
+    "wrapText": false,
+    "className": "",
+    "x": 640,
+    "y": 820,
+    "wires": []
+  },
+  {
+    "id": "ch_ml",
+    "type": "ui-chart",
+    "z": "flow_main",
+    "group": "g_ml",
+    "name": "Prediction, last hour",
+    "label": "Prediction, last hour",
+    "order": 4,
+    "chartType": "line",
+    "category": "topic",
+    "categoryType": "msg",
+    "xAxisLabel": "",
+    "xAxisProperty": "",
+    "xAxisPropertyType": "timestamp",
+    "xAxisType": "time",
+    "xAxisFormat": "",
+    "xAxisFormatType": "auto",
+    "yAxisLabel": "",
+    "yAxisProperty": "payload",
+    "yAxisPropertyType": "msg",
+    "ymin": "0",
+    "ymax": "2",
+    "bins": 10,
+    "action": "append",
+    "stackSeries": false,
+    "pointShape": "circle",
+    "pointRadius": 2,
+    "showLegend": false,
+    "removeOlder": "1",
+    "removeOlderUnit": "3600",
+    "removeOlderPoints": "",
+    "colors": [
+      "#3a6ea5",
+      "#ff7f0e",
+      "#2ca02c",
+      "#d62728",
+      "#9467bd",
+      "#8c564b",
+      "#e377c2",
+      "#7f7f7f",
+      "#bcbd22"
+    ],
+    "textColor": [
+      "#666666"
+    ],
+    "textColorDefault": true,
+    "gridColor": [
+      "#e5e5e5"
+    ],
+    "gridColorDefault": true,
+    "width": 4,
+    "height": 4,
+    "className": "",
+    "interpolation": "step",
+    "x": 630,
+    "y": 860,
+    "wires": []
+  },
+  {
+    "id": "t_ml_trigger",
+    "type": "ui-text",
+    "z": "flow_main",
+    "group": "g_ml",
+    "order": 3,
+    "width": 0,
+    "height": 0,
+    "name": "Last automatic trigger",
+    "label": "Last automatic trigger",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#222222",
+    "wrapText": false,
+    "className": "",
+    "x": 640,
+    "y": 920,
+    "wires": []
+  },
+  {
+    "id": "in_event",
+    "type": "mqtt in",
+    "z": "flow_main",
+    "name": "event",
+    "topic": "iot-project/steven-2802941592/event",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 130,
+    "y": 920,
+    "wires": [
+      [
+        "rule_text"
+      ]
+    ]
+  },
+  {
+    "id": "rule_text",
+    "type": "function",
+    "z": "flow_main",
+    "name": "rule trigger text",
+    "func": "// Only rule events start an automatic water change\nconst e = msg.payload || {};\nif (e.type !== 'rule') return null;\nconst who = e.name === 'R4' ? 'AI model (R4)' : 'Score rule (' + e.name + ')';\nconst time = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Jakarta' });\nmsg.payload = who + ', ' + time;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 920,
+    "wires": [
+      [
+        "t_ml_trigger"
+      ]
+    ]
   }
 ]

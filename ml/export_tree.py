@@ -80,6 +80,10 @@ for name, value in zip(FEATURES, model.feature_importances_):
 # Export ke C++
 classes = list(model.classes_)
 code = port(model, classmap=dict(enumerate(classes)))
+# Simpan jumlah vote pemenang biar ESP32 bisa hitung confidence (vote / jumlah tree)
+assert code.count("return classIdx;") == 1 and code.count("public:") == 1
+code = code.replace("return classIdx;", "lastVotes = maxVotes;\n                        return classIdx;")
+code = code.replace("public:", "public:\n                    float lastVotes = 0;  // vote kelas pemenang dari prediksi terakhir", 1)
 labels_c = ", ".join(f'"{c}"' for c in classes)
 short_c = ", ".join(f'"{SHORT[c]}"' for c in classes)
 nodes = sum(tree.tree_.node_count for tree in model.estimators_)
@@ -96,12 +100,17 @@ header = f"""// Model kualitas air untuk ESP32, dibuat otomatis oleh ml/export_t
 static const char* const WATER_LABELS[] = {{{labels_c}}};
 static const char* const WATER_SHORT[]  = {{{short_c}}};
 
-// Dipanggil dari iot_project.ino, return index ke WATER_LABELS
-inline int classifyWaterFromReadings(float tds, float tds_v, float turb, float turb_v, float t_tank) {{
+#define WATER_MODEL_TREES {args.trees}
+
+// Dipanggil dari iot_project.ino, return index ke WATER_LABELS.
+// confidence = berapa bagian tree yang setuju (0..1), contoh 9 dari 10 tree = 0.9
+inline int classifyWaterFromReadings(float tds, float tds_v, float turb, float turb_v, float t_tank, float* confidence) {{
   (void)tds_v; (void)turb; (void)t_tank;  // ga dipakai model
   static Eloquent::ML::Port::RandomForest model;
   float x[] = {{tds, turb_v}};
-  return model.predict(x);
+  int classIdx = model.predict(x);
+  if (confidence) *confidence = model.lastVotes / WATER_MODEL_TREES;
+  return classIdx;
 }}
 """
 

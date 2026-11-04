@@ -9,6 +9,7 @@ namespace Eloquent {
         namespace Port {
             class RandomForest {
                 public:
+                    float lastVotes = 0;  // vote kelas pemenang dari prediksi terakhir
                     /**
                     * Predict class for features vector
                     */
@@ -187,6 +188,7 @@ namespace Eloquent {
                             }
                         }
 
+                        lastVotes = maxVotes;
                         return classIdx;
                     }
 
@@ -225,10 +227,15 @@ namespace Eloquent {
 static const char* const WATER_LABELS[] = {"clear", "dirty", "slightly_turbid"};
 static const char* const WATER_SHORT[]  = {"CLEAR", "DIRTY", "SLIGHT"};
 
-// Dipanggil dari iot_project.ino, return index ke WATER_LABELS
-inline int classifyWaterFromReadings(float tds, float tds_v, float turb, float turb_v, float t_tank) {
+#define WATER_MODEL_TREES 10
+
+// Dipanggil dari iot_project.ino, return index ke WATER_LABELS.
+// confidence = berapa bagian tree yang setuju (0..1), contoh 9 dari 10 tree = 0.9
+inline int classifyWaterFromReadings(float tds, float tds_v, float turb, float turb_v, float t_tank, float* confidence) {
   (void)tds_v; (void)turb; (void)t_tank;  // ga dipakai model
   static Eloquent::ML::Port::RandomForest model;
   float x[] = {tds, turb_v};
-  return model.predict(x);
+  int classIdx = model.predict(x);
+  if (confidence) *confidence = model.lastVotes / WATER_MODEL_TREES;
+  return classIdx;
 }

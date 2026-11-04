@@ -17,6 +17,7 @@ export type Reading = {
   buzzer: number | null;
   auto: number | null;
   ml: string | null;
+  ml_conf?: number | null;
   stored?: number;
 };
 

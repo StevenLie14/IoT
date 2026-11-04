@@ -54,6 +54,11 @@
 #define LOW_READINGS_TO_ACT     5
 #define COOLDOWN_MS       1800000UL   // 30 min
 #define SETTLE_MS            3000UL   // pause between drain and fill
+
+// R4 (AI): the on-device model starts a water change on its own
+#define ML_RULE_ENABLED      true     // false = the model only predicts, it never drives the pumps
+#define ML_DIRTY_READINGS       5     // "dirty" this many readings in a row (about 15 s) before acting
+#define ML_MIN_CONFIDENCE    0.6f     // a "dirty" prediction only counts when at least 60 % of the trees agree
 #define CYCLE_MS             3000UL   // sensor cycle and publish interval
 
 // ---------- Safety ----------

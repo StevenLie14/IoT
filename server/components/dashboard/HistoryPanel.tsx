@@ -6,7 +6,20 @@ import { SignedOutError, api } from '@/lib/client/api';
 import { cssVar, formatTime } from '@/lib/client/format';
 import type { Reading } from '@/lib/client/types';
 
-type ChartName = 'score' | 'turbidity' | 'temperature' | 'pumps';
+type ChartName = 'score' | 'turbidity' | 'temperature' | 'pumps' | 'prediction';
+
+// Model predictions drawn as steps: 0 = clear, 1 = slightly turbid, 2 = dirty
+const PREDICTION_LEVELS = ['clear', 'slightly_turbid', 'dirty'];
+const PREDICTION_TICKS = ['clear', 'slightly turbid', 'dirty'];
+
+function predictionLevel(ml: string | null | undefined) {
+  const level = PREDICTION_LEVELS.indexOf(ml ?? '');
+  return level < 0 ? null : level;
+}
+
+function confidencePercent(conf: number | null | undefined) {
+  return conf === null || conf === undefined ? null : Math.round(conf * 100);
+}
 
 const RANGES = [
   { minutes: 10, label: '10m' },
@@ -24,6 +37,7 @@ function valuesFor(name: ChartName, row: Reading): (number | null)[] {
   if (name === 'score') return [row.score, row.tds];
   if (name === 'turbidity') return [row.turb];
   if (name === 'temperature') return [row.t_tank];
+  if (name === 'prediction') return [predictionLevel(row.ml), confidencePercent(row.ml_conf)];
   return [row.drain, row.fill];
 }
 
@@ -117,6 +131,25 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
     });
   }
 
+  if (canvases.prediction) {
+    charts.prediction = lineChart(canvases.prediction, [
+      { label: 'Prediction', borderColor: colors.accent, stepped: true, tension: 0, yAxisID: 'y' },
+      { label: 'Confidence (%)', borderColor: colors.ink3, borderDash: [4, 3], borderWidth: 1.2, yAxisID: 'percent' },
+    ], {
+      y: {
+        min: -0.2,
+        max: 2.2,
+        grid: { color: colors.grid },
+        border: { display: false },
+        afterBuildTicks: (axis: { ticks: { value: number }[] }) => {
+          axis.ticks = [0, 1, 2].map((value) => ({ value }));
+        },
+        ticks: { callback: (value: number | string) => PREDICTION_TICKS[Number(value)] ?? '' },
+      },
+      percent: percentAxis,
+    });
+  }
+
   return charts;
 }
 
@@ -129,6 +162,7 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
     turbidity: null,
     temperature: null,
     pumps: null,
+    prediction: null,
   });
   const charts = useRef<Partial<Record<ChartName, Chart>>>({});
   const lastAddedId = useRef<number | null>(null);
@@ -237,6 +271,14 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
             <span className="key"><i style={{ background: 'var(--accent)' }} />fill</span>
           </h3>
           {chartBox('pumps')}
+        </div>
+        <div className="chart wide">
+          <h3>
+            Model prediction
+            <span className="key"><i style={{ background: 'var(--accent)' }} />condition</span>
+            <span className="key"><i style={{ background: 'var(--ink-3)' }} />confidence %</span>
+          </h3>
+          {chartBox('prediction')}
         </div>
       </div>
     </section>

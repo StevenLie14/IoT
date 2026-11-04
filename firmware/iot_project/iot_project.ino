@@ -42,6 +42,7 @@ float turbV = 0, turbIdx = 0;
 float vccV = 0;   // supply voltage seen on ADS A3
 int   score = 100;
 int   mlClass = -1;      // on-device water-condition prediction (-1 = no model)
+float mlConf = 0;        // share of trees that voted for mlClass (0..1)
 
 // ---------------- State machine ----------------
 enum State { IDLE, DRAINING, SETTLING, FILLING };
@@ -49,6 +50,7 @@ const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling"};
 State state = IDLE;
 bool autoMode = AUTO_ON_BOOT;
 int lowCount = 0;
+int mlDirtyCount = 0;   // R4: confident "dirty" predictions in a row
 uint32_t stateSince = 0, cooldownUntil = 0;
 
 // Manual test run (commands "drain N" / "fill N")
@@ -269,6 +271,7 @@ void finishChange(const char* why) {
   cooldownUntil = millis() + COOLDOWN_MS;   // R3
   enterState(IDLE, "change done");
   lowCount = 0;
+  mlDirtyCount = 0;
 }
 
 // A pump ran too long without reaching its float (float stuck, pump dry, leak).
@@ -337,32 +340,50 @@ void runStateMachine() {
   }
 }
 
-// R1: called once per sensor cycle after the score is updated
+// True when the model's latest prediction is a confident "dirty"
+bool mlSaysDirty() {
+  if (!WATER_MODEL_AVAILABLE || mlClass < 0 || mlClass >= WATER_MODEL_CLASSES) return false;
+  return strcmp(WATER_LABELS[mlClass], "dirty") == 0 && mlConf >= ML_MIN_CONFIDENCE;
+}
+
+// R1 (score rule) and R4 (AI rule): called once per sensor cycle after the score is updated
 bool turbFault = false;
 void runRules() {
   // A turbidity reading near 0 V means the signal wire is off or the sensor has no power,
-  // not dirty water, so R1 must not drain the tank on it
+  // not dirty water, so R1 and R4 must not drain the tank on it
   if (turbV < TURB_V_FAULT) {
-    if (!turbFault) publishEvent("fault", "turbidity", turbV, "sensor reads near 0 V, R1 paused");
+    if (!turbFault) publishEvent("fault", "turbidity", turbV, "sensor reads near 0 V, R1 and R4 paused");
     turbFault = true;
     lowCount = 0;
+    mlDirtyCount = 0;
     return;
   }
   turbFault = false;
 
   // A running pump sags the 5 V supply and stirs the water, so readings taken while a pump
-  // runs, or within PUMP_QUIET_MS after it stops, do not count toward R1
+  // runs, or within PUMP_QUIET_MS after it stops, do not count toward R1 or R4
   bool pumpQuietTime = drainOn || fillOn || millis() - pumpChangedAt < PUMP_QUIET_MS;
   if (pumpQuietTime) {
     lowCount = 0;
+    mlDirtyCount = 0;
     return;
   }
 
   if (score < SCORE_THRESHOLD) lowCount++;
   else lowCount = 0;
 
+  if (mlSaysDirty()) mlDirtyCount++;
+  else mlDirtyCount = 0;
+
   bool cooling = (int32_t)(millis() - cooldownUntil) < 0;
-  if (autoMode && state == IDLE && !cooling && lowCount >= LOW_READINGS_TO_ACT) {
+  if (!autoMode || state != IDLE || cooling) return;
+
+  // R4 is checked first so a change the model asks for is logged as the AI's decision
+  if (ML_RULE_ENABLED && mlDirtyCount >= ML_DIRTY_READINGS) {
+    publishEvent("rule", "R4", mlConf, String("model predicts dirty (") + (int)roundf(mlConf * 100) + " %) for " + ML_DIRTY_READINGS + " readings");
+    beep(3);
+    startChange("auto R4 (AI)");
+  } else if (lowCount >= LOW_READINGS_TO_ACT) {
     publishEvent("rule", "R1", score, String("score below ") + SCORE_THRESHOLD + " for " + LOW_READINGS_TO_ACT + " readings");
     beep(3);
     startChange("auto R1");
@@ -528,6 +549,7 @@ void publishData() {
   // On-device model prediction (clear / slightly_turbid / dirty), shown on the dashboard
   if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) {
     doc["ml"] = WATER_LABELS[mlClass];
+    doc["ml_conf"] = roundf(mlConf * 100) / 100;
   }
   char buf[768];
   size_t n = serializeJson(doc, buf, sizeof(buf));
@@ -751,7 +773,7 @@ void sensorCycle() {
       turbIdx = (TURB_V_CLEAR - turbV) / TURB_V_SPAN * 100.0f;
       turbIdx = constrain(turbIdx, 0.0f, 100.0f);
       float waterTemp = isnan(tTank) ? 25.0f : tTank;
-      mlClass = classifyWaterFromReadings(tdsPpm, tdsV, turbIdx, turbV, waterTemp);
+      mlClass = classifyWaterFromReadings(tdsPpm, tdsV, turbIdx, turbV, waterTemp, &mlConf);
     }
     score = computeScore();
     runRules();

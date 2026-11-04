@@ -16,6 +16,11 @@ function findLastChange(events: LogEvent[]) {
   return events.find((event) => event.type === 'state' && String(event.detail ?? '').startsWith('change done')) ?? null;
 }
 
+// Newest event where a rule (R1 score or R4 AI model) started a water change
+function findLastTrigger(events: LogEvent[]) {
+  return events.find((event) => event.type === 'rule') ?? null;
+}
+
 // The whole dashboard page: loads live data and lays out the panels
 export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
   const live = useLiveData();
@@ -45,7 +50,7 @@ export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
         {live.error && <p className="panel-error">{live.error}</p>}
 
         <section className="overview">
-          <HealthPanel reading={reading} lastChange={findLastChange(live.events)} />
+          <HealthPanel reading={reading} lastChange={findLastChange(live.events)} lastTrigger={findLastTrigger(live.events)} />
           <ReadingsPanel key={theme.resolved} reading={reading} recent={live.recent} prediction={live.prediction} />
         </section>
 
