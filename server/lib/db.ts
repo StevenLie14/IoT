@@ -44,6 +44,7 @@ const SCHEMA = `
     source TEXT
   );
   ALTER TABLE readings ADD COLUMN IF NOT EXISTS ml TEXT;
+  ALTER TABLE readings DROP COLUMN IF EXISTS demo;
   CREATE TABLE IF NOT EXISTS events (
     id BIGSERIAL PRIMARY KEY,
     epoch BIGINT NOT NULL,
