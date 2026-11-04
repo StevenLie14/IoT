@@ -55,6 +55,7 @@ uint32_t stateSince = 0, cooldownUntil = 0;
 bool manualDrain = false, manualFill = false;
 bool manualToFloat = false;   // manual run that goes on until its float, limited by the pump timeout
 uint32_t manualUntil = 0;
+uint32_t manualStart = 0, manualRunMs = 0;   // for the pump screen
 
 // Actuator outputs
 bool drainOn = false, fillOn = false, buzzerOn = false;
@@ -412,7 +413,9 @@ void handleCommand(const String& cmd, int arg) {
       runMs = seconds * 1000UL;
       why = "manual test";
     }
-    manualUntil = millis() + runMs;
+    manualStart = millis();
+    manualRunMs = runMs;
+    manualUntil = manualStart + runMs;
     manualToFloat = toFloat;
 
     if (drain) {
@@ -545,47 +548,130 @@ void updateBuzzer() {
   digitalWrite(PIN_BUZZER, buzzerOn);
 }
 
-// Redraws the OLED: connection, mode, state, score and the latest readings
-void drawOled() {
-  if (!oledOk) return;
-  oled.clearDisplay();
+// Prints text centred horizontally at row y in the given text size
+void oledCentered(const char* text, int y, int size) {
+  int16_t x1, y1;
+  uint16_t w, h;
+  oled.setTextSize(size);
+  oled.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+  oled.setCursor((128 - w) / 2, y);
+  oled.print(text);
+}
+
+// Prints text so it ends at the right edge, in text size 1
+void oledRight(const char* text, int y) {
+  oled.setTextSize(1);
+  oled.setCursor(128 - 6 * strlen(text), y);
+  oled.print(text);
+}
+
+// Main screen: mode and connection, big health score, water condition, temperature, TDS and turbidity
+void drawStatusScreen() {
+  // Top bar
   oled.setTextSize(1);
   oled.setCursor(0, 0);
+  oled.print(autoMode ? "AUTO" : "MANUAL");
+  const char* link = mqtt.connected() ? "online" : (WiFi.status() == WL_CONNECTED ? "no mqtt" : "no wifi");
+  oledRight(link, 0);
+  oled.drawFastHLine(0, 10, 128, SSD1306_WHITE);
 
-  // Top row: Wi-Fi, MQTT, mode and state
-  const char* wifi = WiFi.status() == WL_CONNECTED ? "W" : "-";
-  const char* broker = mqtt.connected() ? "M" : "-";
-  const char* mode = autoMode ? "AUTO" : "MAN";
-  oled.printf("%s %s %s", wifi, broker, mode);
-  oled.setCursor(80, 0);
-  oled.print(STATE_NAMES[state]);
-
-  // Big score, with the on-device prediction and the temperature next to it
-  oled.setTextSize(2);
-  oled.setCursor(0, 12);
-  oled.printf("%3d", score);
+  // Left: health score
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%d", score);
+  oled.setTextSize(3);
+  oled.setCursor(score >= 100 ? 0 : 9, 16);
+  oled.print(buf);
   oled.setTextSize(1);
-  oled.setCursor(40, 12);
+  oled.setCursor(9, 42);
   oled.print("score");
-  if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) {
-    oled.setCursor(86, 12);
-    oled.print(WATER_SHORT[mlClass]);
+
+  // Right: water condition from the on-device model, then temperature
+  bool hasModel = WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES;
+  oled.fillRoundRect(62, 14, 66, 13, 3, SSD1306_WHITE);
+  oled.setTextColor(SSD1306_BLACK);
+  oled.setTextSize(1);
+  const char* water = hasModel ? WATER_SHORT[mlClass] : "NO MODEL";
+  oled.setCursor(62 + (66 - 6 * (int)strlen(water)) / 2, 17);
+  oled.print(water);
+  oled.setTextColor(SSD1306_WHITE);
+
+  if (isnan(tTank)) snprintf(buf, sizeof(buf), "--.-C");
+  else              snprintf(buf, sizeof(buf), "%.1fC", tTank);
+  oled.setTextSize(2);
+  oled.setCursor(66, 32);
+  oled.print(buf);
+
+  // Bottom row: TDS and turbidity (0 = clear, 100 = very cloudy)
+  oled.drawFastHLine(0, 52, 128, SSD1306_WHITE);
+  oled.setTextSize(1);
+  oled.setCursor(0, 56);
+  oled.printf("TDS %.0f ppm", tdsPpm);
+  snprintf(buf, sizeof(buf), "Turb %.0f%%", turbIdx);
+  oledRight(buf, 56);
+}
+
+// Shown while a pump runs (or during the pause between drain and fill):
+// what is happening, until when, and how long it has been running
+void drawPumpScreen() {
+  uint32_t now = millis();
+  bool waterChange = state != IDLE;
+  bool draining = waterChange ? state == DRAINING : drainOn;
+  bool settling = state == SETTLING;
+
+  // Title bar
+  oled.fillRect(0, 0, 128, 11, SSD1306_WHITE);
+  oled.setTextColor(SSD1306_BLACK);
+  oledCentered(waterChange ? "WATER CHANGE" : "PUMP TEST", 2, 1);
+  oled.setTextColor(SSD1306_WHITE);
+
+  // What is happening
+  const char* action = settling ? "WAITING" : (draining ? "DRAINING" : "FILLING");
+  oledCentered(action, 16, 2);
+
+  const char* until;
+  uint32_t elapsed, limit;
+  if (waterChange) {
+    elapsed = now - stateSince;
+    if (settling)      { until = "before filling";      limit = SETTLE_MS; }
+    else if (draining) { until = "until bottom float";  limit = DRAIN_TIMEOUT_MS; }
+    else               { until = "until top float";     limit = FILL_TIMEOUT_MS; }
+  } else {
+    elapsed = now - manualStart;
+    limit = manualRunMs;
+    if (manualToFloat) until = draining ? "until bottom float" : "until top float";
+    else               until = "timed test";
   }
-  oled.setCursor(40, 22);
-  if (isnan(tTank)) oled.print("--C");
-  else              oled.printf("%.1fC", tTank);
+  oledCentered(until, 34, 1);
 
-  // Sensor values
-  oled.setCursor(0, 34);
-  oled.printf("TDS  %.0f ppm", tdsPpm);
-  oled.setCursor(0, 44);
-  oled.printf("Turb %.2fV (%.0f)", turbV, turbIdx);
+  // Progress towards the time limit (the timeout for float runs)
+  elapsed = min(elapsed, limit);
+  oled.drawRect(0, 45, 128, 7, SSD1306_WHITE);
+  int fill = limit ? (int)((uint64_t)elapsed * 124 / limit) : 0;
+  oled.fillRect(2, 47, fill, 3, SSD1306_WHITE);
 
-  // Bottom row: what the pumps are doing
-  oled.setCursor(0, 54);
-  if (state == DRAINING) oled.print("drain to bottom float");
-  else if (state == FILLING) oled.print("fill to top float");
-  else oled.printf("drain %s fill %s", drainOn ? "ON" : "-", fillOn ? "ON" : "-");
+  char buf[24];
+  oled.setTextSize(1);
+  oled.setCursor(0, 56);
+  oled.printf("%lu s", (unsigned long)(elapsed / 1000));
+  bool floatRun = !settling && (waterChange || manualToFloat);
+  snprintf(buf, sizeof(buf), floatRun ? "max %lu s" : "of %lu s", (unsigned long)(limit / 1000));
+  oledRight(buf, 56);
+}
+
+// True while the pump screen should be shown instead of the status screen
+bool pumpScreenActive() {
+  return state != IDLE || drainOn || fillOn;
+}
+
+// Redraws the OLED: the pump screen while a pump runs, otherwise the status screen
+uint32_t oledDrawnAt = 0;
+void drawOled() {
+  if (!oledOk) return;
+  oledDrawnAt = millis();
+  oled.clearDisplay();
+  oled.setTextColor(SSD1306_WHITE);
+  if (pumpScreenActive()) drawPumpScreen();
+  else                    drawStatusScreen();
   oled.display();
 }
 
@@ -732,4 +818,6 @@ void loop() {
   runStateMachine();
   sensorCycle();
   updateBuzzer();
+  // The pump screen counts seconds, so redraw it more often than once per sensor cycle
+  if (pumpScreenActive() && millis() - oledDrawnAt >= 500) drawOled();
 }
