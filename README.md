@@ -139,16 +139,18 @@ pembacaan yang hampir sama tidak bocor ke data uji. Hasil di `ml/results/`:
 `metrics.md` (tabel akurasi dan F1, siap ditempel ke laporan), `confusion_matrix.png`,
 `feature_importance.png`, `decision_tree_rules.txt`. Model terbaik disimpan di `ml/models/`.
 
-### Model di ESP32 (decision tree)
+### Model di ESP32 (Random Forest)
 Selain lewat laptop, model bisa jalan langsung di ESP32 sehingga tetap bekerja tanpa Wi-Fi:
 
 ```bash
 cd ml
-python export_tree.py --csv iot_project_dataset_2026-11-01.csv
+python export_tree.py --csv data/iot_project_dataset_2026-11-03_labelled.csv
 ```
 
-Skrip ini melatih decision tree (fitur TDS dan turbidity, kedalaman maksimal 4), menampilkan akurasi
-di data uji, lalu menulis `firmware/iot_project/water_model.h` berisi aturan `if-else`. Upload ulang firmware.
+Skrip ini melatih Random Forest kecil (10 tree, kedalaman maksimal 3, fitur `tds` dan `turb_v`), menampilkan
+akurasi di data uji, lalu menulis `firmware/iot_project/water_model.h`: tiap tree jadi fungsi `if-else` dan
+hasilnya di-voting. Untuk satu decision tree saja: `--model tree`. Upload ulang firmware.
+EDA dan perbandingan 7 model ada di `ml/water_quality_models.ipynb`.
 ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY). Untuk mengirimnya ke dashboard, tambahkan lagi
 field `ml` di `publishData()` (dihapus untuk Assignment 2 karena belum ada model); server dan kartu "AI prediction" sudah siap.
 
