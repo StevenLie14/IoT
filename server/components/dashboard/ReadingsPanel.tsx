@@ -37,6 +37,9 @@ function floatText(value: number | null | undefined) {
   return value ? 'triggered' : 'open';
 }
 
+// Temporarily off: hides the ML prediction card. Set back to true to show it again.
+const SHOW_PREDICTION = false;
+
 // Which model made the prediction, plus its confidence when known
 function predictionText(prediction: Prediction) {
   const hasConfidence = prediction.confidence !== undefined && prediction.confidence !== null;
@@ -97,7 +100,7 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
         )}
       </div>
 
-      {prediction && (
+      {SHOW_PREDICTION && prediction && (
         <div className={`reading model ${prediction.prediction}`}>
           <span className="label">Condition (model)</span>
           <div className="value">
