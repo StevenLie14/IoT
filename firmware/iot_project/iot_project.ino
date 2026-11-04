@@ -16,7 +16,6 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include "config.h"
-#include "water_model.h"   // random forest exported by ml/export_tree.py
 #include "mqtt_ca.h"
 
 // ---------------- Objects ----------------
@@ -41,7 +40,6 @@ float tdsV = 0, tdsPpm = 0;
 float turbV = 0, turbIdx = 0;
 float vccV = 0;   // supply voltage seen on ADS A3
 int   score = 100;
-int   mlClass = -1;      // on-device water-condition prediction (-1 = no model)
 
 // ---------------- State machine ----------------
 enum State { IDLE, DRAINING, SETTLING, FILLING };
@@ -525,10 +523,6 @@ void publishData() {
   doc["fill"] = fillOn ? 1 : 0;
   doc["buzzer"] = buzzerOn ? 1 : 0;
   doc["auto"] = autoMode ? 1 : 0;
-  // On-device model prediction (clear / slightly_turbid / dirty), shown on the dashboard
-  if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) {
-    doc["ml"] = WATER_LABELS[mlClass];
-  }
   char buf[768];
   size_t n = serializeJson(doc, buf, sizeof(buf));
   if (mqtt.connected()) mqtt.publish(topic("data").c_str(), (const uint8_t*)buf, n, false);
@@ -585,14 +579,11 @@ void drawStatusScreen() {
   oled.setCursor(9, 42);
   oled.print("score");
 
-  // Right: water condition (model label, or GOOD/POOR from the score), then temperature
-  bool hasModel = WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES;
+  // Right: water status from the score (GOOD / POOR), then temperature
   oled.fillRoundRect(62, 14, 66, 13, 3, SSD1306_WHITE);
   oled.setTextColor(SSD1306_BLACK);
   oled.setTextSize(1);
-  const char* water;
-  if (OLED_SHOW_ML) water = hasModel ? WATER_SHORT[mlClass] : "NO MODEL";
-  else              water = score >= SCORE_THRESHOLD ? "GOOD" : "POOR";
+  const char* water = score >= SCORE_THRESHOLD ? "GOOD" : "POOR";
   oled.setCursor(62 + (66 - 6 * (int)strlen(water)) / 2, 17);
   oled.print(water);
   oled.setTextColor(SSD1306_WHITE);
@@ -752,8 +743,6 @@ void sensorCycle() {
       // 0 = as clear as calibration, 100 = TURB_V_SPAN volts darker
       turbIdx = (TURB_V_CLEAR - turbV) / TURB_V_SPAN * 100.0f;
       turbIdx = constrain(turbIdx, 0.0f, 100.0f);
-      float waterTemp = isnan(tTank) ? 25.0f : tTank;
-      mlClass = classifyWaterFromReadings(tdsPpm, tdsV, turbIdx, turbV, waterTemp);
     }
     score = computeScore();
     runRules();

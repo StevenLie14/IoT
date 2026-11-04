@@ -48,9 +48,6 @@
 #define FLOAT_BOT_TRIGGERED_LEVEL LOW    // same float type: closes when the float drops
 #define FLOAT_DEBOUNCE_MS  500        // a float must hold its new state this long to count
 
-// ---------- OLED ----------
-#define OLED_SHOW_ML         false     // true = model label (CLEAR/SLIGHT/DIRTY), false = GOOD/POOR from the score
-
 // ---------- Automation ----------
 #define SCORE_THRESHOLD        60
 #define LOW_READINGS_TO_ACT     5
