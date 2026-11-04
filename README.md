@@ -151,8 +151,8 @@ Skrip ini melatih Random Forest kecil (10 tree, kedalaman maksimal 3, fitur `tds
 akurasi di data uji, lalu menulis `firmware/iot_project/water_model.h`: tiap tree jadi fungsi `if-else` dan
 hasilnya di-voting. Untuk satu decision tree saja: `--model tree`. Upload ulang firmware.
 EDA dan perbandingan 7 model ada di `ml/water_quality_models.ipynb`.
-ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY). Untuk mengirimnya ke dashboard, tambahkan lagi
-field `ml` di `publishData()` (dihapus untuk Assignment 2 karena belum ada model); server dan kartu "AI prediction" sudah siap.
+ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY) dan mengirimnya sebagai field `ml` di data MQTT,
+sehingga muncul di kartu prediksi pada dashboard dan tersimpan di kolom `ml` database.
 
 **Isi CSV dataset** (`/api/export.csv`, hanya data dari ESP32): `timestamp_wib`, `t_tank`, `tds`, `tds_v`, `turb`, `turb_v`, `label`.
 Baris saat pompa jalan dan 5 detik sesudahnya tidak ikut diekspor (terganggu gelembung). Data simulator: `?source=sim`.

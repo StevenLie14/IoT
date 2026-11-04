@@ -113,7 +113,7 @@ export function useLiveData() {
 
   // The ESP32's own decision tree wins over the laptop model when both are present
   const deviceModel: Prediction | null = reading?.ml
-    ? { prediction: reading.ml, source: 'decision tree on ESP32' }
+    ? { prediction: reading.ml, source: 'random forest on ESP32' }
     : null;
 
   return {

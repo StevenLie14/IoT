@@ -16,7 +16,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include "config.h"
-#include "water_model.h"   // decision tree exported by ml/export_tree.py
+#include "water_model.h"   // random forest exported by ml/export_tree.py
 #include "mqtt_ca.h"
 
 // ---------------- Objects ----------------
@@ -529,6 +529,10 @@ void publishData() {
   doc["buzzer"] = buzzerOn ? 1 : 0;
   doc["auto"] = autoMode ? 1 : 0;
   doc["demo"] = demoMode ? 1 : 0;
+  // On-device model prediction (clear / slightly_turbid / dirty), shown on the dashboard
+  if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) {
+    doc["ml"] = WATER_LABELS[mlClass];
+  }
   char buf[768];
   size_t n = serializeJson(doc, buf, sizeof(buf));
   if (mqtt.connected()) mqtt.publish(topic("data").c_str(), (const uint8_t*)buf, n, false);
