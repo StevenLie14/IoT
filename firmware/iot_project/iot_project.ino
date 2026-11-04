@@ -767,7 +767,7 @@ void sensorCycle() {
     phase = 3;
   } else if (phase == 3 && t >= 1900) {
     if (adsOk) {
-      turbV = readVoltsMedian(ADS_CH_TURB) * DIVIDER_RATIO * TURB_V_GAIN;
+      turbV = readVoltsMedian(ADS_CH_TURB) * DIVIDER_RATIO;
       vccV = readVoltsMedian(ADS_CH_VCC) * VCC_DIVIDER_RATIO;
       // 0 = as clear as calibration, 100 = TURB_V_SPAN volts darker
       turbIdx = (TURB_V_CLEAR - turbV) / TURB_V_SPAN * 100.0f;
