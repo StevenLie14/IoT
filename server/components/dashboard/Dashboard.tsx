@@ -46,7 +46,7 @@ export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
 
         <section className="overview">
           <HealthPanel reading={reading} lastChange={findLastChange(live.events)} />
-          <ReadingsPanel key={theme.resolved} reading={reading} recent={live.recent} prediction={live.prediction} />
+          <ReadingsPanel key={theme.resolved} reading={reading} recent={live.recent} />
         </section>
 
         <section className="split">

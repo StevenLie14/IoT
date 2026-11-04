@@ -1,6 +1,6 @@
 # IoT Project: kode lengkap
 
-Paket ini berisi semua kode untuk Assignment 2 dan tahap AI (AOL):
+Paket ini berisi semua kode untuk Assignment 2:
 
 ```
 iot/
@@ -14,10 +14,7 @@ iot/
 │   ├─ lib/                 Database, MQTT ingest, login
 │   ├─ instrumentation.ts   Menyalakan koneksi MQTT dan database saat server start
 │   └─ tools/simulate.js    ESP32 palsu untuk tes tanpa hardware
-├─ nodered/                 Dashboard Node-RED (Dashboard 2.0) dari topik MQTT yang sama
-└─ ml/                      Machine learning (Python)
-    ├─ water_quality_models.ipynb  EDA, cleaning, perbandingan 7 model
-    └─ export_tree.py              Melatih Random Forest kecil dan menulis water_model.h untuk ESP32
+└─ nodered/                 Dashboard Node-RED (Dashboard 2.0) dari topik MQTT yang sama
 ```
 
 ## Kesesuaian dengan aturan tugas
@@ -108,7 +105,7 @@ Di server, Node-RED ikut di-deploy sebagai container `iot-project-nodered` (port
 2. Biarkan berjalan minimal 33 menit untuk 1.000 baris (kartu **Dataset** menghitungnya).
 3. Klik **Download CSV (device)**. File ini yang dilampirkan di laporan.
 
-### Data berlabel untuk ML
+### Data berlabel
 Pilih label di kartu **Condition label** sebelum merekam tiap jenis air. Setiap baris baru disimpan dengan label itu.
 
 | Label | Cara membuat air | Lama rekam |
@@ -117,44 +114,13 @@ Pilih label di kartu **Condition label** sebelum merekam tiap jenis air. Setiap 
 | `slightly_turbid` | beberapa tetes susu atau sedikit tanah | 10–15 menit |
 | `dirty` | lebih banyak susu/tanah + sejumput garam | 10–15 menit |
 
-Tips: ulangi tiap kondisi 2–3 kali di waktu berbeda supaya model tidak hanya menghafal satu sesi.
+Tips: ulangi tiap kondisi 2–3 kali di waktu berbeda supaya datanya tidak hanya dari satu sesi.
 Matikan pompa saat merekam (baris saat pompa jalan otomatis dibuang).
-
-## 4. Machine learning
-
-```bash
-cd ml
-pip install -r requirements.txt
-jupyter notebook water_quality_models.ipynb
-```
-
-Taruh CSV hasil export dashboard di `ml/data/`, lalu jalankan semua sel notebook. Isinya: overview data,
-cleaning, EDA (time series, distribusi, boxplot, korelasi), split berdasarkan waktu per label (awal untuk latih,
-akhir untuk uji, supaya pembacaan yang hampir sama tidak bocor ke data uji), lalu perbandingan Decision Tree,
-Random Forest, Gradient Boosting, k-NN, Logistic Regression, SVM, dan Naive Bayes. Semua grafik tersimpan di
-`ml/results/` dan semua model di `ml/models/`.
-
-### Model di ESP32 (Random Forest)
-Model jalan langsung di ESP32 sehingga tetap bekerja tanpa Wi-Fi:
-
-```bash
-cd ml
-python export_tree.py --csv data/iot_project_dataset_2026-11-04.csv
-```
-
-Skrip ini melatih Random Forest kecil (10 tree, kedalaman maksimal 3, fitur `tds` dan `turb_v`), menampilkan
-akurasi di data uji (split waktu 80/20), lalu memakai [micromlgen](https://github.com/eloquentarduino/micromlgen)
-untuk menulis `firmware/iot_project/water_model.h`: tiap tree jadi `if-else` dan hasilnya di-voting (satu suara per tree). Jumlah tree dan kedalaman bisa diubah dengan `--trees` dan `--depth`. Upload ulang firmware.
-ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY) dan mengirimnya sebagai field `ml` di data MQTT,
-sehingga muncul di kartu prediksi pada dashboard dan tersimpan di kolom `ml` database.
 
 **Isi CSV dataset** (`/api/export.csv`, hanya data dari ESP32): `timestamp_wib`, `t_tank`, `tds`, `tds_v`, `turb`, `turb_v`, `label`.
 Baris saat pompa jalan dan 5 detik sesudahnya tidak ikut diekspor (terganggu gelembung). Data simulator: `?source=sim`.
 
-Sebelum model dibuat, `water_model.h` berisi placeholder sehingga firmware tetap bisa di-compile.
-Latih dan ekspor ulang setiap kali sensor dikalibrasi ulang.
-
-## 5. Deploy dashboard ke server (Docker)
+## 4. Deploy dashboard ke server (Docker)
 
 Mengikuti pola repo `stevenlie` dan `serverh1`: GitHub Actions di runner `shin` membangun image,
 push ke Harbor, lalu `docker compose up` di server. Nginx + SSL dibuat lewat repo `ansible-infrastructure`.
@@ -188,7 +154,7 @@ Buka http://localhost:7575.
 **Tanpa `DASHBOARD_PASSWORD`, dashboard tidak punya login dan siapa pun bisa menyalakan pompa.**
 Selalu isi password kalau dashboard bisa diakses dari internet.
 
-## 6. Broker MQTT privat (user, password, TLS)
+## 5. Broker MQTT privat (user, password, TLS)
 
 broker.hivemq.com itu publik: siapa pun yang tahu nama topiknya bisa membaca data dan mengirim perintah ke ESP32. Semua bagian sudah mendukung broker dengan login dan TLS; selama belum diisi, semuanya tetap memakai broker publik.
 
@@ -219,6 +185,5 @@ Di Serial Monitor, `MQTT connect failed, state 5` berarti user atau password sal
 ## Status pengujian
 
 - Server, dashboard, simulator, dan aturan otomatis (di simulator) sudah diuji jalan.
-- Skrip ML sudah diuji dengan data sintetis untuk memastikan berjalan. Angka akurasi untuk laporan harus dari data asli Anda.
 - Image Docker sudah diuji jalan (login, data tetap ada setelah restart, health check).
 - Firmware **belum di-compile**; compile dan uji di Arduino IDE Anda.

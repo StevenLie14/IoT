@@ -16,7 +16,6 @@ export type Reading = {
   fill: number | null;
   buzzer: number | null;
   auto: number | null;
-  ml: string | null;
   stored?: number;
 };
 
@@ -26,12 +25,6 @@ export type Health = {
   dataFresh: boolean;
   label: string;
   recording: boolean;
-};
-
-export type Prediction = {
-  prediction: string;
-  confidence?: number | null;
-  source: string;
 };
 
 export type Stats = {

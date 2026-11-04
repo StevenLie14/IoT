@@ -1,13 +1,12 @@
 import RangeBar from './RangeBar';
 import Sparkline from './Sparkline';
 import { RANGES, levelFor } from '@/lib/client/ranges';
-import { LABEL_NAMES, formatNumber } from '@/lib/client/format';
-import type { Prediction, Reading } from '@/lib/client/types';
+import { formatNumber } from '@/lib/client/format';
+import type { Reading } from '@/lib/client/types';
 
 type Props = {
   reading: Reading | null;
   recent: Reading[];
-  prediction: Prediction | null;
 };
 
 // What the pumps are doing, in words
@@ -37,18 +36,8 @@ function floatText(value: number | null | undefined) {
   return value ? 'triggered' : 'open';
 }
 
-// Temporarily off: hides the ML prediction card. Set back to true to show it again.
-const SHOW_PREDICTION = false;
-
-// Which model made the prediction, plus its confidence when known
-function predictionText(prediction: Prediction) {
-  const hasConfidence = prediction.confidence !== undefined && prediction.confidence !== null;
-  if (!hasConfidence) return prediction.source;
-  return `${prediction.source} · ${Math.round(prediction.confidence! * 100)}%`;
-}
-
-// Sensor cards (temperature, TDS, turbidity), water level and the ML prediction
-export default function ReadingsPanel({ reading, recent, prediction }: Props) {
+// Sensor cards (temperature, TDS, turbidity) and water level
+export default function ReadingsPanel({ reading, recent }: Props) {
   const temperatureLevel = levelFor(reading?.t_tank, RANGES.temperature);
   const tdsLevel = levelFor(reading?.tds, RANGES.tds);
   const turbidityLevel = levelFor(reading?.turb, RANGES.turbidity);
@@ -100,15 +89,6 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
         )}
       </div>
 
-      {SHOW_PREDICTION && prediction && (
-        <div className={`reading model ${prediction.prediction}`}>
-          <span className="label">Condition (model)</span>
-          <div className="value">
-            <span className="word">{LABEL_NAMES[prediction.prediction] ?? prediction.prediction}</span>
-          </div>
-          <span className="sub">{predictionText(prediction)}</span>
-        </div>
-      )}
     </div>
   );
 }

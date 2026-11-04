@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { SignedOutError, api } from '@/lib/client/api';
-import type { Health, LogEvent, Prediction, Reading, Stats } from '@/lib/client/types';
+import type { Health, LogEvent, Reading, Stats } from '@/lib/client/types';
 
 type LatestResponse = {
   reading: Reading | null;
@@ -98,10 +98,6 @@ export function useLiveData() {
     };
   }, [addReading, refreshStats]);
 
-  // Water condition predicted by the model running on the ESP32
-  const prediction: Prediction | null = reading?.ml
-    ? { prediction: reading.ml, source: 'random forest on ESP32' }
-    : null;
 
   return {
     reading,
@@ -109,7 +105,6 @@ export function useLiveData() {
     lastReadingAt,
     health,
     setHealth,
-    prediction,
     stats,
     events,
     error,

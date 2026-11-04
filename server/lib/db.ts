@@ -23,10 +23,10 @@ export function q<T extends Record<string, any> = Record<string, any>>(sql: stri
 // Reading fields stored as columns, in the same order as the insert statement
 export const COLS = [
   't_tank', 'tds', 'tds_v', 'turb', 'turb_v', 'f_top', 'f_bot',
-  'score', 'state', 'drain', 'fill', 'buzzer', 'auto', 'ml',
+  'score', 'state', 'drain', 'fill', 'buzzer', 'auto',
 ] as const;
 
-export const TEXT_COLS = new Set(['state', 'ml']);
+export const TEXT_COLS = new Set(['state']);
 
 // Creates the tables on first start; safe to run again on every start
 const SCHEMA = `
@@ -39,11 +39,9 @@ const SCHEMA = `
     f_top SMALLINT, f_bot SMALLINT,
     score SMALLINT, state TEXT, drain SMALLINT, fill SMALLINT,
     buzzer SMALLINT, auto SMALLINT,
-    ml TEXT,
     label TEXT,
     source TEXT
   );
-  ALTER TABLE readings ADD COLUMN IF NOT EXISTS ml TEXT;
   ALTER TABLE readings DROP COLUMN IF EXISTS demo;
   CREATE TABLE IF NOT EXISTS events (
     id BIGSERIAL PRIMARY KEY,
