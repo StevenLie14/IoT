@@ -100,15 +100,17 @@
       "y": 245.0,
       "width": 400,
       "height": 56,
-      "text": "initialise sensors, OLED,\nrelays off, Wi-Fi + MQTT",
-      "originalText": "initialise sensors, OLED,\nrelays off, Wi-Fi + MQTT",
+      "text": "initialise sensors, OLED, relays\noff, auto off, Wi-Fi + MQTT",
+      "originalText": "initialise sensors, OLED, relays\noff, auto off, Wi-Fi + MQTT",
       "fontSize": 22,
       "fontFamily": 3,
       "textAlign": "center",
       "verticalAlign": "middle",
       "strokeColor": "#1e293b",
       "roughness": 0,
-      "containerId": "init"
+      "containerId": "init",
+      "version": 3,
+      "versionNonce": 1290853332
     },
     {
       "id": "read",
@@ -138,16 +140,18 @@
       "x": 220.0,
       "y": 369.0,
       "width": 400,
-      "height": 84,
-      "text": "read temperature, TDS,\nturbidity, floats;\ncompute health score",
-      "originalText": "read temperature, TDS,\nturbidity, floats;\ncompute health score",
+      "height": 82.5,
+      "text": "every 3 s: read temperature,\nTDS, turbidity, floats;\nscore + water model",
+      "originalText": "every 3 s: read temperature,\nTDS, turbidity, floats;\nscore + water model",
       "fontSize": 22,
       "fontFamily": 3,
       "textAlign": "center",
       "verticalAlign": "middle",
       "strokeColor": "#1e293b",
       "roughness": 0,
-      "containerId": "read"
+      "containerId": "read",
+      "version": 2,
+      "versionNonce": 536834049
     },
     {
       "id": "pub",
@@ -178,15 +182,17 @@
       "y": 521.0,
       "width": 400,
       "height": 56,
-      "text": "publish /data over MQTT,\nupdate the OLED",
-      "originalText": "publish /data over MQTT,\nupdate the OLED",
+      "text": "publish /data (only with a\ntemperature), update the OLED",
+      "originalText": "publish /data (only with a\ntemperature), update the OLED",
       "fontSize": 22,
       "fontFamily": 3,
       "textAlign": "center",
       "verticalAlign": "middle",
       "strokeColor": "#1e293b",
       "roughness": 0,
-      "containerId": "pub"
+      "containerId": "pub",
+      "version": 3,
+      "versionNonce": 1418688781
     },
     {
       "id": "d1",
@@ -213,16 +219,18 @@
       "x": 230.0,
       "y": 685.0,
       "width": 380,
-      "height": 84,
-      "text": "score < 60 for 5\nreadings, auto on,\nno cooldown ?",
-      "originalText": "score < 60 for 5\nreadings, auto on,\nno cooldown ?",
+      "height": 82.5,
+      "text": "score < 60 ×5,\nauto on, no cooldown,\nturbidity OK ?",
+      "originalText": "score < 60 ×5,\nauto on, no cooldown,\nturbidity OK ?",
       "fontSize": 22,
       "fontFamily": 3,
       "textAlign": "center",
       "verticalAlign": "middle",
       "strokeColor": "#1e293b",
       "roughness": 0,
-      "containerId": "d1"
+      "containerId": "d1",
+      "version": 3,
+      "versionNonce": 1314411040
     },
     {
       "id": "beep",
@@ -291,7 +299,7 @@
       "x": 220.0,
       "y": 987.0,
       "width": 400,
-      "height": 56,
+      "height": 55.0,
       "text": "drain pump ON until the\nbottom float is reached",
       "originalText": "drain pump ON until the\nbottom float is reached",
       "fontSize": 22,
@@ -300,7 +308,9 @@
       "verticalAlign": "middle",
       "strokeColor": "#1e293b",
       "roughness": 0,
-      "containerId": "drain"
+      "containerId": "drain",
+      "version": 2,
+      "versionNonce": 1280143319
     },
     {
       "id": "fill",
@@ -330,16 +340,18 @@
       "x": 220.0,
       "y": 1113.0,
       "width": 400,
-      "height": 56,
-      "text": "fill pump ON until the\ntop float is reached",
-      "originalText": "fill pump ON until the\ntop float is reached",
+      "height": 55.0,
+      "text": "wait 3 s, then fill pump\nON until the top float",
+      "originalText": "wait 3 s, then fill pump\nON until the top float",
       "fontSize": 22,
       "fontFamily": 3,
       "textAlign": "center",
       "verticalAlign": "middle",
       "strokeColor": "#1e293b",
       "roughness": 0,
-      "containerId": "fill"
+      "containerId": "fill",
+      "version": 2,
+      "versionNonce": 1571963440
     },
     {
       "id": "cool",
@@ -664,6 +676,49 @@
       "verticalAlign": "top",
       "strokeColor": "#3b82f6",
       "roughness": 0
+    },
+    {
+      "id": "safety",
+      "x": 800,
+      "y": 960,
+      "width": 430,
+      "height": 170,
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "roughness": 0,
+      "boundElements": [
+        {
+          "id": "safety_t",
+          "type": "text"
+        }
+      ],
+      "type": "rectangle",
+      "strokeColor": "#b91c1c",
+      "backgroundColor": "#fee2e2",
+      "roundness": {
+        "type": 3
+      },
+      "seed": 842884733,
+      "versionNonce": 131649477
+    },
+    {
+      "type": "text",
+      "id": "safety_t",
+      "x": 810,
+      "y": 970,
+      "width": 410,
+      "height": 135.0,
+      "text": "safety (always on)\n• pump > 2 min without its float:\n  stop both, 5 beeps, auto off\n• turbidity near 0 V: rule 1 blocked\n• readings during a pump run and\n  5 s after are not counted",
+      "originalText": "safety (always on)\n• pump > 2 min without its float:\n  stop both, 5 beeps, auto off\n• turbidity near 0 V: rule 1 blocked\n• readings during a pump run and\n  5 s after are not counted",
+      "fontSize": 18,
+      "fontFamily": 3,
+      "textAlign": "left",
+      "verticalAlign": "middle",
+      "strokeColor": "#1e293b",
+      "roughness": 0,
+      "containerId": "safety",
+      "seed": 1096944537,
+      "versionNonce": 481231940
     }
   ],
   "appState": {
