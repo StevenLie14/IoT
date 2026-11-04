@@ -154,8 +154,8 @@ EDA dan perbandingan 7 model ada di `ml/water_quality_models.ipynb`.
 ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY). Untuk mengirimnya ke dashboard, tambahkan lagi
 field `ml` di `publishData()` (dihapus untuk Assignment 2 karena belum ada model); server dan kartu "AI prediction" sudah siap.
 
-**Isi CSV dataset** (`/api/export.csv`, hanya data dari ESP32): `timestamp_wib`, `t_tank`, `tds`, `tds_v`, `turb`, `turb_v`,
-`f_top`, `f_bot`, `score`, `state`, `drain`, `fill`, `buzzer`, `auto`, `demo`, `label`. Data simulator: `?source=sim`.
+**Isi CSV dataset** (`/api/export.csv`, hanya data dari ESP32): `timestamp_wib`, `t_tank`, `tds`, `tds_v`, `turb`, `turb_v`, `label`.
+Baris saat pompa jalan dan 5 detik sesudahnya tidak ikut diekspor (terganggu gelembung). Data simulator: `?source=sim`.
 
 Sebelum model dibuat, `water_model.h` berisi placeholder sehingga firmware tetap bisa di-compile.
 Latih dan ekspor ulang setiap kali sensor dikalibrasi ulang.
