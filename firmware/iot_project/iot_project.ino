@@ -585,12 +585,14 @@ void drawStatusScreen() {
   oled.setCursor(9, 42);
   oled.print("score");
 
-  // Right: water condition from the on-device model, then temperature
+  // Right: water condition (model label, or GOOD/POOR from the score), then temperature
   bool hasModel = WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES;
   oled.fillRoundRect(62, 14, 66, 13, 3, SSD1306_WHITE);
   oled.setTextColor(SSD1306_BLACK);
   oled.setTextSize(1);
-  const char* water = hasModel ? WATER_SHORT[mlClass] : "NO MODEL";
+  const char* water;
+  if (OLED_SHOW_ML) water = hasModel ? WATER_SHORT[mlClass] : "NO MODEL";
+  else              water = score >= SCORE_THRESHOLD ? "GOOD" : "POOR";
   oled.setCursor(62 + (66 - 6 * (int)strlen(water)) / 2, 17);
   oled.print(water);
   oled.setTextColor(SSD1306_WHITE);
