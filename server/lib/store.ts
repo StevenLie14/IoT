@@ -1,11 +1,9 @@
 export type ServerReading = Record<string, number | string | null> & { id: number; epoch: number; source: string };
-export type LaptopPrediction = { prediction: string; confidence?: number | null; model?: string; epoch: number };
 type Listener = (event: string, data: unknown) => void;
 
 // In-memory state shared by the MQTT ingest and every API route (latest reading, status, SSE listeners)
 type Store = {
   latest: ServerReading | null;
-  latestMl: LaptopPrediction | null;
   deviceStatus: string;
   mqttUp: boolean;
   lastDataAt: number;
@@ -21,7 +19,6 @@ const globalForStore = globalThis as unknown as { iotProjectStore?: Store };
 if (!globalForStore.iotProjectStore) {
   globalForStore.iotProjectStore = {
     latest: null,
-    latestMl: null,
     deviceStatus: 'unknown',
     mqttUp: false,
     lastDataAt: 0,

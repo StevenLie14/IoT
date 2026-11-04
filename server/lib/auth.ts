@@ -48,7 +48,7 @@ function isValidSession(token: string | undefined) {
   }
 }
 
-// Accepts HTTP Basic auth, used by scripts such as ml/predict_live.py
+// Accepts HTTP Basic auth, for scripts that call the API
 function hasValidBasicAuth(header: string | null) {
   if (!header?.startsWith('Basic ')) return false;
   const decoded = Buffer.from(header.slice(6), 'base64').toString();

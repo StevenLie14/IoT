@@ -1,5 +1,8 @@
 """Train a tree model on the IoT Project dataset and export it as C code for the ESP32.
 
+The model comparison and EDA live in water_quality_models.ipynb; this script only builds
+the model that goes into the firmware.
+
 Two models are supported:
   forest (default): a small Random Forest, every tree becomes a C function and the trees vote
   tree            : a single decision tree, easiest to read
@@ -20,11 +23,40 @@ import os
 import sys
 
 import numpy as np
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.tree import DecisionTreeClassifier, _tree, export_text
 
-from train_classifier import LABEL_ORDER, load, time_split
+LABEL_ORDER = ["clear", "slightly_turbid", "dirty"]
+
+
+def load(path, features, include_sim=False):
+    """Reads the dashboard CSV and keeps labelled readings with all chosen features.
+    Older exports with pump or source columns are filtered the same way the dashboard does now."""
+    df = pd.read_csv(path)
+    missing = [c for c in features + ["label", "timestamp_wib"] if c not in df.columns]
+    if missing:
+        sys.exit(f"CSV is missing columns: {missing}")
+    if not include_sim and "source" in df.columns:
+        df = df[df["source"] == "device"]
+    for c in ("drain", "fill"):
+        if c in df.columns:
+            df = df[df[c].fillna(0) == 0]
+    df = df.dropna(subset=["label"] + features)
+    df["time"] = pd.to_datetime(df["timestamp_wib"])
+    return df.sort_values("time").reset_index(drop=True)
+
+
+def time_split(df, test_frac):
+    """Per label: first part of the recording for training, the last part for testing.
+    Neighbouring readings are almost identical, so a random split would leak test data into training."""
+    train, test = [], []
+    for _, g in df.groupby("label"):
+        cut = int(len(g) * (1 - test_frac))
+        train.append(g.iloc[:cut])
+        test.append(g.iloc[cut:])
+    return pd.concat(train), pd.concat(test)
 
 # Dataset column -> firmware argument of classifyWaterFromReadings()
 FIRMWARE_ARGS = ["tds", "tds_v", "turb", "turb_v", "t_tank"]

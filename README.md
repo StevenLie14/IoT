@@ -16,9 +16,8 @@ iot/
 │   └─ tools/simulate.js    ESP32 palsu untuk tes tanpa hardware
 ├─ nodered/                 Dashboard Node-RED (Dashboard 2.0) dari topik MQTT yang sama
 └─ ml/                      Machine learning (Python)
-    ├─ train_classifier.py  Klasifikasi kondisi air: clear / slightly_turbid / dirty
-    ├─ anomaly_detection.py Deteksi anomali sensor
-    └─ predict_live.py      Prediksi langsung, hasilnya tampil di dashboard
+    ├─ water_quality_models.ipynb  EDA, cleaning, perbandingan 7 model
+    └─ export_tree.py              Melatih Random Forest kecil dan menulis water_model.h untuk ESP32
 ```
 
 ## Kesesuaian dengan aturan tugas
@@ -126,19 +125,17 @@ Matikan pompa saat merekam (baris saat pompa jalan otomatis dibuang).
 ```bash
 cd ml
 pip install -r requirements.txt
-python train_classifier.py --csv iot_project_dataset_2026-11-01.csv
-python anomaly_detection.py --csv iot_project_dataset_2026-11-01.csv
-python predict_live.py            # server harus jalan; hasil tampil di kartu "AI prediction"
+jupyter notebook water_quality_models.ipynb
 ```
 
-**train_classifier.py** membandingkan Decision Tree, k-NN, Logistic Regression, dan Random Forest dengan
-fitur TDS dan turbidity. Data dibagi per label berdasarkan waktu (awal untuk latih, akhir untuk uji) supaya
-pembacaan yang hampir sama tidak bocor ke data uji. Hasil di `ml/results/`:
-`metrics.md` (tabel akurasi dan F1, siap ditempel ke laporan), `confusion_matrix.png`,
-`feature_importance.png`, `decision_tree_rules.txt`. Model terbaik disimpan di `ml/models/`.
+Taruh CSV hasil export dashboard di `ml/data/`, lalu jalankan semua sel notebook. Isinya: overview data,
+cleaning, EDA (time series, distribusi, boxplot, korelasi), split berdasarkan waktu per label (awal untuk latih,
+akhir untuk uji, supaya pembacaan yang hampir sama tidak bocor ke data uji), lalu perbandingan Decision Tree,
+Random Forest, Gradient Boosting, k-NN, Logistic Regression, SVM, dan Naive Bayes. Semua grafik tersimpan di
+`ml/results/` dan semua model di `ml/models/`.
 
 ### Model di ESP32 (Random Forest)
-Selain lewat laptop, model bisa jalan langsung di ESP32 sehingga tetap bekerja tanpa Wi-Fi:
+Model jalan langsung di ESP32 sehingga tetap bekerja tanpa Wi-Fi:
 
 ```bash
 cd ml
@@ -148,7 +145,6 @@ python export_tree.py --csv data/iot_project_dataset_2026-11-03_labelled.csv
 Skrip ini melatih Random Forest kecil (10 tree, kedalaman maksimal 3, fitur `tds` dan `turb_v`), menampilkan
 akurasi di data uji, lalu menulis `firmware/iot_project/water_model.h`: tiap tree jadi fungsi `if-else` dan
 hasilnya di-voting. Untuk satu decision tree saja: `--model tree`. Upload ulang firmware.
-EDA dan perbandingan 7 model ada di `ml/water_quality_models.ipynb`.
 ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY) dan mengirimnya sebagai field `ml` di data MQTT,
 sehingga muncul di kartu prediksi pada dashboard dan tersimpan di kolom `ml` database.
 
@@ -157,9 +153,6 @@ Baris saat pompa jalan dan 5 detik sesudahnya tidak ikut diekspor (terganggu gel
 
 Sebelum model dibuat, `water_model.h` berisi placeholder sehingga firmware tetap bisa di-compile.
 Latih dan ekspor ulang setiap kali sensor dikalibrasi ulang.
-
-**anomaly_detection.py** menandai nilai di luar rentang, sensor yang nyangkut (nilai sama persis 2 menit),
-lonjakan mendadak, dan pembacaan aneh menurut Isolation Forest. Hasil: `results/anomalies.csv` dan `anomalies.png`.
 
 ## 5. Deploy dashboard ke server (Docker)
 
@@ -184,9 +177,6 @@ Setelah itu setiap push ke `main` otomatis build dan deploy. Buka `https://iot.s
 dan login dengan `DASHBOARD_USER` (bawaan `admin`) dan `DASHBOARD_PASSWORD`.
 Halaman login muncul otomatis. Sesi berlaku 7 hari, dan mengganti `DASHBOARD_PASSWORD` membuat semua sesi keluar.
 Setelah 10 kali password salah dari satu alamat IP, login dikunci 15 menit.
-
-Prediksi live dari laptop ke server online:
-`python predict_live.py --server https://iot.stevenlie.site --user admin --password <password>`
 
 ### Jalankan dengan Docker di komputer sendiri
 ```bash
