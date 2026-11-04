@@ -13,7 +13,7 @@ export default function HealthPanel({ reading, lastChange }: Props) {
   const meterWidth = hasScore ? Math.min(100, Math.max(0, score)) : 0;
 
   let autoText = '--';
-  if (reading) autoText = reading.auto ? (reading.demo ? 'On, demo timing' : 'On') : 'Off';
+  if (reading) autoText = reading.auto ? 'On' : 'Off';
 
   let lastChangeText = '--';
   if (lastChange) lastChangeText = formatTime(lastChange.epoch);

@@ -21,6 +21,7 @@ const TURB_V_CLEAR = 3.87;
 const TDS_GOOD = 300;
 const TDS_BAD = 700;
 const SCORE_THRESHOLD = 60;
+const COOLDOWN_MS = 30 * 60 * 1000;   // wait after a water change before R1 may fire again
 const LOW_READINGS_TO_ACT = 5;
 
 // Simulated tank: level 1 = top float, LOW_LEVEL = bottom float
@@ -35,7 +36,6 @@ let temp = 26.5;
 let level = 1;
 let state = 'idle';
 let auto = 1;
-let demo = 0;
 let drain = 0;
 let fill = 0;
 let lowCount = 0;
@@ -107,8 +107,7 @@ function updateTank(seconds) {
       fill = 0;
       dirt *= LOW_LEVEL;   // part of the dirty water was replaced
       state = 'idle';
-      const cooldownMs = demo ? 60000 : 1800000;
-      cooldownUntil = Date.now() + cooldownMs / SPEED;
+      cooldownUntil = Date.now() + COOLDOWN_MS / SPEED;
       sendEvent('actuator', 'fill', 0, 'top float');
       sendEvent('state', 'idle', 0, 'change done');
       lowCount = 0;
@@ -144,11 +143,6 @@ client.on('message', (topic, payload) => {
   if (cmd === 'auto') {
     auto = message.on ? 1 : 0;
     sendEvent('mode', 'auto', auto, '');
-  }
-
-  if (cmd === 'demo') {
-    demo = message.on ? 1 : 0;
-    sendEvent('mode', 'demo', demo, '');
   }
 
   if (cmd === 'beep') sendEvent('actuator', 'buzzer', 1, 'beep');
@@ -208,6 +202,5 @@ setInterval(() => {
     fill,
     buzzer: 0,
     auto,
-    demo,
   });
 }, INTERVAL);

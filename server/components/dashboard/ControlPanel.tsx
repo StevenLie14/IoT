@@ -46,14 +46,14 @@ function testRequest(pump: 'drain' | 'fill', toFloat = false): Pending {
   };
 }
 
-// Turns automatic water change or demo timing on/off
-function modeRequest(mode: 'auto' | 'demo', on: boolean): Pending {
+// Turns automatic water change on/off
+function autoRequest(on: boolean): Pending {
   return {
-    key: mode,
-    command: { cmd: mode, on },
-    isDone: (reading) => Boolean(reading[mode]) === on,
-    confirmedBy: (event) => event.type === 'mode' && event.name === mode && Boolean(event.value) === on,
-    doneMessage: `${mode === 'auto' ? 'Automatic water change' : 'Demo timing'} is ${on ? 'on' : 'off'}`,
+    key: 'auto',
+    command: { cmd: 'auto', on },
+    isDone: (reading) => Boolean(reading.auto) === on,
+    confirmedBy: (event) => event.type === 'mode' && event.name === 'auto' && Boolean(event.value) === on,
+    doneMessage: `Automatic water change is ${on ? 'on' : 'off'}`,
   };
 }
 
@@ -145,9 +145,8 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
   const lowTitle = 'Bottom float reached: the tank is already low';
   const fullTitle = 'Top float reached: the tank is already full';
 
-  // While a mode change is pending, show the switch in its new position already
+  // While the mode change is pending, show the switch in its new position already
   const autoOn = isPending('auto') ? Boolean(pending?.command.on) : Boolean(reading?.auto);
-  const demoOn = isPending('demo') ? Boolean(pending?.command.on) : Boolean(reading?.demo);
 
   // CSS class for a button: dims it while its command is pending
   function buttonClass(key: string, extra = '') {
@@ -219,20 +218,10 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
                 type="checkbox"
                 checked={autoOn}
                 disabled={disabled || isPending('auto')}
-                onChange={(event) => request(modeRequest('auto', event.target.checked))}
+                onChange={(event) => request(autoRequest(event.target.checked))}
               />
               <i />
               Automatic water change
-            </label>
-            <label className={`switch ${isPending('demo') ? 'is-pending' : ''}`}>
-              <input
-                type="checkbox"
-                checked={demoOn}
-                disabled={disabled || isPending('demo')}
-                onChange={(event) => request(modeRequest('demo', event.target.checked))}
-              />
-              <i />
-              Demo timing
             </label>
           </div>
         </div>

@@ -16,7 +16,6 @@ export type Reading = {
   fill: number | null;
   buzzer: number | null;
   auto: number | null;
-  demo: number | null;
   ml: string | null;
   stored?: number;
 };

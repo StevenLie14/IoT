@@ -53,9 +53,7 @@ TDS → ADS A0 · turbidity → pembagi 10k/20k → ADS A1 · relay pompa buang 
 Cek arah float di Serial Monitor: kalau terbalik, ganti `FLOAT_TOP_TRIGGERED_LEVEL` / `FLOAT_BOT_TRIGGERED_LEVEL`.
 
 **Perintah Serial** (juga bisa dari dashboard):
-`change` · `stop` · `auto on` / `auto off` · `demo on` / `demo off` · `beep` · `drain 3` · `fill 3`
-
-**Mode demo** memperpendek cooldown jadi 60 detik, cocok untuk presentasi.
+`change` · `stop` · `auto on` / `auto off` · `beep` · `drain 3` · `fill 3`
 
 ## 2. Server dan dashboard
 

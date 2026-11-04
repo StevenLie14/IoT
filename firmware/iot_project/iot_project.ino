@@ -47,7 +47,7 @@ int   mlClass = -1;      // on-device water-condition prediction (-1 = no model)
 enum State { IDLE, DRAINING, SETTLING, FILLING };
 const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling"};
 State state = IDLE;
-bool autoMode = AUTO_ON_BOOT, demoMode = false;
+bool autoMode = AUTO_ON_BOOT;
 int lowCount = 0;
 uint32_t stateSince = 0, cooldownUntil = 0;
 
@@ -71,8 +71,6 @@ int phase = 0;
 // ---------------- Helpers ----------------
 // Full MQTT topic for a sub-topic, e.g. topic("data") -> TOPIC_BASE/data
 String topic(const char* sub) { return String(TOPIC_BASE) + "/" + sub; }
-// Wait after a water change before R1 may start another one (shorter in demo mode)
-uint32_t cooldownMs() { return demoMode ? 60000UL : COOLDOWN_MS; }
 // Unix time from NTP, or 0 while the clock is not set yet
 uint32_t epochNow() {
   time_t t = time(nullptr);
@@ -267,7 +265,7 @@ void stopAll(const char* why) {
 // Ends a water change and starts the cooldown so R1 cannot fire again right away
 void finishChange(const char* why) {
   setFill(false, why);
-  cooldownUntil = millis() + cooldownMs();   // R3
+  cooldownUntil = millis() + COOLDOWN_MS;   // R3
   enterState(IDLE, "change done");
   lowCount = 0;
 }
@@ -378,10 +376,6 @@ void handleCommand(const String& cmd, int arg) {
   else if (cmd == "auto") {
     autoMode = arg != 0;
     publishEvent("mode", "auto", autoMode, "");
-  }
-  else if (cmd == "demo") {
-    demoMode = arg != 0;
-    publishEvent("mode", "demo", demoMode, "");
   }
   else if (cmd == "beep")     beep(1);
   else if (cmd == "drain" || cmd == "fill" || cmd == "drain_float" || cmd == "fill_float") {
@@ -528,7 +522,6 @@ void publishData() {
   doc["fill"] = fillOn ? 1 : 0;
   doc["buzzer"] = buzzerOn ? 1 : 0;
   doc["auto"] = autoMode ? 1 : 0;
-  doc["demo"] = demoMode ? 1 : 0;
   // On-device model prediction (clear / slightly_turbid / dirty), shown on the dashboard
   if (WATER_MODEL_AVAILABLE && mlClass >= 0 && mlClass < WATER_MODEL_CLASSES) {
     doc["ml"] = WATER_LABELS[mlClass];
@@ -562,7 +555,7 @@ void drawOled() {
   // Top row: Wi-Fi, MQTT, mode and state
   const char* wifi = WiFi.status() == WL_CONNECTED ? "W" : "-";
   const char* broker = mqtt.connected() ? "M" : "-";
-  const char* mode = demoMode ? "DEMO" : (autoMode ? "AUTO" : "MAN");
+  const char* mode = autoMode ? "AUTO" : "MAN";
   oled.printf("%s %s %s", wifi, broker, mode);
   oled.setCursor(80, 0);
   oled.print(STATE_NAMES[state]);
@@ -727,7 +720,7 @@ void setup() {
   mqtt.setBufferSize(1024);
   mqtt.setCallback(onMqtt);
 
-  Serial.println("Commands: change | stop | auto on/off | demo on/off | beep | drain 3 | fill 3 | drain_float | fill_float");
+  Serial.println("Commands: change | stop | auto on/off | beep | drain 3 | fill 3 | drain_float | fill_float");
   cycleStart = millis();
 }
 

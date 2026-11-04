@@ -51,7 +51,7 @@
 // ---------- Automation ----------
 #define SCORE_THRESHOLD        60
 #define LOW_READINGS_TO_ACT     5
-#define COOLDOWN_MS       1800000UL   // 30 min (60 s in demo mode)
+#define COOLDOWN_MS       1800000UL   // 30 min
 #define SETTLE_MS            3000UL   // pause between drain and fill
 #define CYCLE_MS             3000UL   // sensor cycle and publish interval
 
