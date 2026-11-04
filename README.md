@@ -139,12 +139,12 @@ Model jalan langsung di ESP32 sehingga tetap bekerja tanpa Wi-Fi:
 
 ```bash
 cd ml
-python export_tree.py --csv data/iot_project_dataset_2026-11-03_labelled.csv
+python export_tree.py --csv data/iot_project_dataset_2026-11-04.csv
 ```
 
 Skrip ini melatih Random Forest kecil (10 tree, kedalaman maksimal 3, fitur `tds` dan `turb_v`), menampilkan
-akurasi di data uji, lalu menulis `firmware/iot_project/water_model.h`: tiap tree jadi fungsi `if-else` dan
-hasilnya di-voting. Untuk satu decision tree saja: `--model tree`. Upload ulang firmware.
+akurasi di data uji (split waktu 80/20), lalu memakai [micromlgen](https://github.com/eloquentarduino/micromlgen)
+untuk menulis `firmware/iot_project/water_model.h`: tiap tree jadi `if-else` dan hasilnya di-voting (satu suara per tree). Jumlah tree dan kedalaman bisa diubah dengan `--trees` dan `--depth`. Upload ulang firmware.
 ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY) dan mengirimnya sebagai field `ml` di data MQTT,
 sehingga muncul di kartu prediksi pada dashboard dan tersimpan di kolom `ml` database.
 
