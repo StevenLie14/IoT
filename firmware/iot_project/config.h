@@ -50,4 +50,3 @@
 #define TURB_V_FAULT 0.20f // turbidity below this = wire off or sensor unpowered, R1 is skipped
 #define DRAIN_TIMEOUT_MS 120000UL // drain longer than this without the bottom float = fault
 #define FILL_TIMEOUT_MS 120000UL // fill longer than this without the top float = fault
-#define PUMP_QUIET_MS 5000UL // readings during a pump run and this long after it do not count for R1
