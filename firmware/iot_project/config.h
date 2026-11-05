@@ -1,7 +1,6 @@
 // Values marked (CAL) come from my own calibration.
 #pragma once
 
-// ---------- Wi-Fi and MQTT ----------
 // Wi-Fi name and password are in secrets.h (copy secrets.example.h)
 #if __has_include("secrets.h")
 #include "secrets.h"
@@ -13,7 +12,6 @@
 // Use something unique so nobody else on the public broker uses the same topics
 #define TOPIC_BASE    "iot-project/steven-2802941592"
 
-// ---------- Pins (ESP32 30-pin on expansion board) ----------
 #define PIN_SDA          21
 #define PIN_SCL          22
 #define PIN_TEMP          4    // DS18B20 data, 4.7k pull-up to 3.3V
@@ -30,11 +28,9 @@
 #define ADS_CH_TURB  1
 #define ADS_CH_VCC   3    // supply monitor (see VCC_DIVIDER_RATIO)
 
-// ---------- Parts that are fitted ----------
 #define USE_FLOATS  true    // top float = tank full, bottom float = tank low
 #define RELAY_ACTIVE_LOW true
 
-// ---------- Calibration (CAL) ----------
 #define DIVIDER_RATIO      1.5f     // 10k / 20k divider on the turbidity output
 #define VCC_DIVIDER_RATIO  1.5f     // A3: 5V -> 10k -> A3 -> 20k -> GND (1.5). 3.3V straight to A3: 1.0f
 #define TURB_V_CLEAR       1.75f    // (CAL) turbidity sensor voltage in clean water
@@ -46,14 +42,12 @@
 #define FLOAT_BOT_TRIGGERED_LEVEL LOW    // same float type: closes when the float drops
 #define FLOAT_DEBOUNCE_MS  500        // a float must hold its new state this long to count
 
-// ---------- Automation ----------
 #define SCORE_THRESHOLD        60
 #define LOW_READINGS_TO_ACT     5
 #define COOLDOWN_MS       1800000UL   // 30 min
 #define SETTLE_MS            3000UL   // pause between drain and fill
 #define CYCLE_MS             3000UL   // sensor cycle and publish interval
 
-// ---------- Safety ----------
 #define AUTO_ON_BOOT          false      // auto mode after power-on; false = wait for "auto on"
 #define TURB_V_FAULT          0.20f      // turbidity below this = wire off or sensor unpowered, R1 is skipped
 #define DRAIN_TIMEOUT_MS    120000UL     // drain longer than this without the bottom float = fault

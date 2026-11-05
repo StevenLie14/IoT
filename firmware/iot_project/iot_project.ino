@@ -14,7 +14,6 @@
 #include <ArduinoJson.h>
 #include "config.h"
 
-// ---------------- Objects ----------------
 Adafruit_SSD1306 oled(128, 64, &Wire, -1);
 Adafruit_ADS1115 ads;
 OneWire oneWire(PIN_TEMP);
@@ -26,14 +25,12 @@ bool oledOk = false, adsOk = false;
 int tempCount = 0;
 DeviceAddress tempAddr;
 
-// ---------------- Latest readings ----------------
 float tTank = NAN;
 float tdsV = 0, tdsPpm = 0;
 float turbV = 0, turbIdx = 0;
 float vccV = 0;   // supply voltage seen on ADS A3
 int   score = 100;
 
-// ---------------- State machine ----------------
 enum State { IDLE, DRAINING, SETTLING, FILLING };
 const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling"};
 State state = IDLE;
@@ -56,7 +53,6 @@ uint32_t beepNext = 0;
 uint32_t cycleStart = 0;
 int phase = 0;
 
-// ---------------- Helpers ----------------
 String topic(const char* sub) { return String(TOPIC_BASE) + "/" + sub; }
 uint32_t epochNow() {
   time_t t = time(nullptr);
@@ -181,7 +177,6 @@ float lin(float v, float good, float bad) {
   return 100.0f * (1.0f - t);
 }
 
-// ---------------- Score ----------------
 int computeScore() {
   float weightedSum = 0;
   float totalWeight = 0;
@@ -209,7 +204,6 @@ int computeScore() {
   return (int)roundf(weightedSum / totalWeight);
 }
 
-// ---------------- Water change ----------------
 void startChange(const char* reason) {
   if (state != IDLE) {
     Serial.println("Change already running");
@@ -336,7 +330,6 @@ void runRules() {
   }
 }
 
-// ---------------- Commands (MQTT JSON and Serial text) ----------------
 void handleCommand(const String& cmd, int arg) {
   if (cmd == "change")        startChange("manual change");
   else if (cmd == "stop")     stopAll("stop command");
@@ -432,7 +425,6 @@ void handleSerial() {
   }
 }
 
-// ---------------- Network ----------------
 uint32_t lastWifiTry = 0, lastMqttTry = 0;
 
 // Reconnects in the background so the loop never blocks
@@ -486,7 +478,6 @@ void publishData() {
   Serial.println(buf);
 }
 
-// ---------------- Outputs ----------------
 void updateBuzzer() {
   uint32_t now = millis();
   if (beepsLeft > 0 && (int32_t)(now - beepNext) >= 0) {
@@ -648,7 +639,6 @@ void readTemperature() {
   }
 }
 
-// ---------------- Sensor cycle (non-blocking) ----------------
 // The DS18B20 is measured and read while the TDS board is off, because TDS current
 // in the water can disturb the temperature sensor in the same tank.
 // 0 s   TDS power off, start temperature conversion
@@ -696,7 +686,6 @@ void sensorCycle() {
   }
 }
 
-// ---------------- Setup / loop ----------------
 void setup() {
   Serial.begin(115200);
   delay(300);
