@@ -6,7 +6,6 @@ const mqtt = require('mqtt');
 const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 const TOPIC_BASE = process.env.TOPIC_BASE || 'iot-project/steven-2802941592';
 
-// Reads a numeric command-line option, e.g. --interval 1000
 const args = process.argv.slice(2);
 function option(name, fallback) {
   const index = args.indexOf(name);
@@ -55,7 +54,6 @@ function unixTime() {
   return Math.floor(Date.now() / 1000);
 }
 
-// Sends a simulator event in the same format as the firmware
 function sendEvent(type, name, value, detail) {
   publish('event', { ts: unixTime(), src: 'sim', type, name, value, detail });
 }
@@ -78,7 +76,6 @@ function healthScore(turbIdx) {
   return Math.round(0.5 * tdsScore + 0.375 * turbScore + 0.125 * tempScore);
 }
 
-// Starts a simulated water change (drain, then refill)
 function startChange(why) {
   if (state !== 'idle') return;
   state = 'draining';
@@ -87,7 +84,6 @@ function startChange(why) {
   sendEvent('actuator', 'drain', 1, why);
 }
 
-// Moves the tank level with the pumps and ends each phase at its float
 function updateTank(seconds) {
   if (state === 'draining') {
     level = Math.max(level - LEVEL_PER_SEC * seconds, LOW_LEVEL);
@@ -119,7 +115,6 @@ client.on('connect', () => {
   client.subscribe(`${TOPIC_BASE}/cmd`);
 });
 
-// Handles dashboard commands like the real device does
 client.on('message', (topic, payload) => {
   let message;
   try {
@@ -160,8 +155,6 @@ client.on('message', (topic, payload) => {
   }
 });
 
-// Every tick: the water gets a bit dirtier, the tank follows the pumps, R1 is checked,
-// and one reading is published
 setInterval(() => {
   const seconds = (INTERVAL / 1000) * SPEED;
 

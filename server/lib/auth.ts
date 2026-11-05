@@ -10,7 +10,6 @@ export const SESSION_DAYS = 7;
 // Secret for signing session cookies; changing the password logs everyone out
 const sessionKey = crypto.createHash('sha256').update(`iot-project-session:${USERNAME}:${PASSWORD}`).digest();
 
-// Login is only required when DASHBOARD_PASSWORD is set
 export function authEnabled() {
   return PASSWORD !== '';
 }
@@ -22,19 +21,16 @@ function sameText(a: string, b: string) {
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
-// HMAC signature that makes the session cookie tamper-proof
 function sign(data: string) {
   return crypto.createHmac('sha256', sessionKey).update(data).digest('base64url');
 }
 
-// Creates a signed session token that expires after SESSION_DAYS
 export function makeSession() {
   const payload = { user: USERNAME, expires: Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000 };
   const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
   return `${data}.${sign(data)}`;
 }
 
-// Checks the cookie signature and expiry
 function isValidSession(token: string | undefined) {
   if (!token) return false;
   const [data, signature] = token.split('.');
@@ -48,7 +44,7 @@ function isValidSession(token: string | undefined) {
   }
 }
 
-// Accepts HTTP Basic auth, for scripts that call the API
+// HTTP Basic auth, for scripts that call the API
 function hasValidBasicAuth(header: string | null) {
   if (!header?.startsWith('Basic ')) return false;
   const decoded = Buffer.from(header.slice(6), 'base64').toString();
@@ -57,19 +53,16 @@ function hasValidBasicAuth(header: string | null) {
   return sameText(decoded.slice(0, separator), USERNAME) && sameText(decoded.slice(separator + 1), PASSWORD);
 }
 
-// Checks the username and password from the login form
 export function checkCredentials(username: string, password: string) {
   return sameText(username, USERNAME) && sameText(password, PASSWORD);
 }
 
-// true when the request has a valid session cookie (or login is off)
 export async function isSignedIn() {
   if (!authEnabled()) return true;
   const cookieStore = await cookies();
   return isValidSession(cookieStore.get(SESSION_COOKIE)?.value);
 }
 
-// Guard for API routes: returns a 401 response when not signed in, otherwise null
 export async function requireAuth(request: Request) {
   if (!authEnabled()) return null;
   if (hasValidBasicAuth(request.headers.get('authorization'))) return null;
@@ -109,13 +102,11 @@ export function clearFailedLogins(ip: string) {
   failedAttempts.delete(ip);
 }
 
-// Client IP, taken from the reverse proxy headers when present
 export function clientIp(request: Request) {
   const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0].trim();
   return forwarded || request.headers.get('x-real-ip') || 'local';
 }
 
-// Whether the original request used HTTPS, so the cookie can be marked Secure
 export function isHttps(request: Request) {
   const forwardedProto = request.headers.get('x-forwarded-proto');
   if (forwardedProto) return forwardedProto === 'https';

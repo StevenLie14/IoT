@@ -12,7 +12,6 @@ type LatestResponse = {
 const MAX_EVENTS = 200;
 const MAX_RECENT = 60;
 
-// All live dashboard data: loads the current state once, then follows the server's SSE stream
 export function useLiveData() {
   const [reading, setReading] = useState<Reading | null>(null);
   const [recent, setRecent] = useState<Reading[]>([]);
@@ -23,12 +22,10 @@ export function useLiveData() {
   const [error, setError] = useState('');
   const [resetCount, setResetCount] = useState(0);
 
-  // Re-fetches the dataset counts from the database
   const refreshStats = useCallback(async () => {
     setStats(await api<Stats>('/api/stats'));
   }, []);
 
-  // Handles a new reading from the stream
   const addReading = useCallback((next: Reading) => {
     setReading(next);
     setLastReadingAt(Date.now());
@@ -46,7 +43,6 @@ export function useLiveData() {
   useEffect(() => {
     let cancelled = false;
 
-    // Latest reading, last 10 minutes of history, recent events and dataset counts
     async function loadInitialData() {
       try {
         const latest = await api<LatestResponse>('/api/latest');
@@ -69,7 +65,6 @@ export function useLiveData() {
 
     loadInitialData();
 
-    // Live updates pushed by the server
     const stream = new EventSource('/api/stream');
     stream.addEventListener('reading', (message) => addReading(JSON.parse(message.data)));
     stream.addEventListener('health', (message) => setHealth(JSON.parse(message.data)));

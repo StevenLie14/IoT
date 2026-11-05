@@ -21,7 +21,6 @@ function lastReadingText(lastReadingAt: number, now: number) {
   return `Last reading ${Math.round(seconds / 60)} min ago`;
 }
 
-// Header: app name, ESP32 and MQTT status, time since the last reading, theme and sign out
 export default function TopBar({ health, lastReadingAt, canSignOut, theme, onThemeChange }: Props) {
   const now = useNow();
   const deviceOnline = health?.device === 'online';

@@ -9,7 +9,6 @@ type Props = {
   recent: Reading[];
 };
 
-// What the pumps are doing, in words
 function pumpText(reading: Reading | null) {
   if (reading?.drain) return 'draining to the bottom float';
   if (reading?.fill) return 'refilling to the top float';
@@ -21,7 +20,6 @@ function floatsConflict(reading: Reading | null) {
   return Boolean(reading?.f_top && reading?.f_bot);
 }
 
-// Water level derived from the two floats
 function levelText(reading: Reading | null) {
   if (!reading) return '--';
   if (floatsConflict(reading)) return 'check floats';
@@ -30,13 +28,11 @@ function levelText(reading: Reading | null) {
   return 'normal';
 }
 
-// State of one float switch
 function floatText(value: number | null | undefined) {
   if (value === null || value === undefined) return '--';
   return value ? 'triggered' : 'open';
 }
 
-// Sensor cards (temperature, TDS, turbidity) and water level
 export default function ReadingsPanel({ reading, recent }: Props) {
   const temperatureLevel = levelFor(reading?.t_tank, RANGES.temperature);
   const tdsLevel = levelFor(reading?.tds, RANGES.tds);

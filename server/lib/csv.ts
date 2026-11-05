@@ -1,4 +1,3 @@
-// Quotes a value when it contains a comma, quote or newline
 export function escapeCsv(value: unknown) {
   if (value === null || value === undefined) return '';
   const text = String(value);
@@ -11,7 +10,6 @@ export function toWib(epoch: number) {
   return new Date((epoch + 7 * 3600) * 1000).toISOString().replace('T', ' ').slice(0, 19);
 }
 
-// Builds a downloadable CSV response
 export function csvResponse(lines: string[], filename: string) {
   return new Response(lines.join('\n'), {
     headers: {

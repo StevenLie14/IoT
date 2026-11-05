@@ -34,7 +34,6 @@ const changeRequest: Pending = {
   doneMessage: 'Water change is running',
 };
 
-// Manual pump test: 3 s run, or until the float when toFloat is true
 function testRequest(pump: 'drain' | 'fill', toFloat = false): Pending {
   const target = pump === 'drain' ? 'the bottom float' : 'the top float';
   return {
@@ -46,7 +45,6 @@ function testRequest(pump: 'drain' | 'fill', toFloat = false): Pending {
   };
 }
 
-// Turns automatic water change on/off
 function autoRequest(on: boolean): Pending {
   return {
     key: 'auto',
@@ -65,7 +63,6 @@ const stopRequest: Pending = {
   doneMessage: 'Pumps stopped',
 };
 
-// Device controls: water change, stop, modes, and the maintenance pump tests
 export default function ControlPanel({ reading, latestEvent, deviceOnline }: Props) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [message, setMessage] = useState<Message>({ text: '', kind: '' });
@@ -87,7 +84,6 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     }
   }, [latestEvent, pending]);
 
-  // No confirmation in time: give up and tell the user
   useEffect(() => {
     if (!pending) return;
     const timer = setTimeout(() => {
@@ -104,7 +100,6 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     return () => clearTimeout(timer);
   }, [message]);
 
-  // Sends a command through /api/cmd; returns false and shows an error if it fails
   async function sendCommand(command: Command) {
     try {
       await post('/api/cmd', command);
@@ -117,7 +112,6 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     }
   }
 
-  // Sends a command and waits for the device to confirm it (see Pending)
   async function request(next: Pending) {
     setPending({ ...next, eventBefore: latestEvent });
     setMessage({ text: 'Sent. Waiting for the ESP32...', kind: '' });
@@ -148,12 +142,10 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
   // While the mode change is pending, show the switch in its new position already
   const autoOn = isPending('auto') ? Boolean(pending?.command.on) : Boolean(reading?.auto);
 
-  // CSS class for a button: dims it while its command is pending
   function buttonClass(key: string, extra = '') {
     return ['btn', extra, isPending(key) ? 'is-pending' : ''].filter(Boolean).join(' ');
   }
 
-  // One plain status line: quiet when nothing runs, highlighted when something does
   function statusLine() {
     if (!reading) return { text: 'Waiting for data', active: false };
 

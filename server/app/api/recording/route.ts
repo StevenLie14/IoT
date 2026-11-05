@@ -4,7 +4,7 @@ import { broadcast, health, store } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-// Pauses or resumes storing readings. Live data keeps flowing to the dashboard either way.
+// Live data still reaches the dashboard while recording is paused
 export async function POST(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;

@@ -1,4 +1,3 @@
-// Scale and thresholds for one sensor: normal band, and alarm limits beyond it
 export type Range = {
   min: number;
   max: number;
@@ -17,7 +16,6 @@ export const RANGES = {
 
 export type Level = 'normal' | 'warn' | 'bad';
 
-// normal / warn / bad for a value, used to colour the range bars
 export function levelFor(value: number | null | undefined, range: Range): Level {
   if (value === null || value === undefined) return 'normal';
   if (range.alarmLow !== undefined && value <= range.alarmLow) return 'bad';

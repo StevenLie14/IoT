@@ -7,13 +7,11 @@ type Props = {
   unit?: string;
 };
 
-// Position of a value on the bar, clamped to 0-100 %
 function toPercent(value: number, range: Range) {
   const ratio = (value - range.min) / (range.max - range.min);
   return Math.min(100, Math.max(0, ratio * 100));
 }
 
-// Horizontal scale with the normal band shaded and a marker at the current value
 export default function RangeBar({ value, range, level, unit = '' }: Props) {
   const bandLeft = toPercent(range.normalLow, range);
   const bandWidth = toPercent(range.normalHigh, range) - bandLeft;

@@ -3,7 +3,6 @@ import { q } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// Dataset counts for the Dataset panel: rows per source, rows per label, number of events
 export async function GET(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;

@@ -4,13 +4,12 @@ import { q } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// Only what the model needs: the water sensors and the label
+// Water sensors and the label only
 const DATA_COLUMNS = ['t_tank', 'tds', 'tds_v', 'turb', 'turb_v', 'label'];
 
 // Readings while a pump runs, and for this many seconds after, are disturbed by bubbles and stirring
 const PUMP_QUIET_SEC = 5;
 
-// Downloads the readings as the dataset CSV (?source=device by default).
 // Pump rows are left out here because the CSV no longer has the pump columns to filter on.
 export async function GET(request: Request) {
   const denied = await requireAuth(request);

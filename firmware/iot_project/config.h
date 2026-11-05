@@ -1,9 +1,8 @@
-// ===== IoT Project configuration =====
-// Edit this file only. Values marked (CAL) come from your own calibration.
+// Values marked (CAL) come from my own calibration.
 #pragma once
 
 // ---------- Wi-Fi and MQTT ----------
-// Wi-Fi name/password and MQTT login live in secrets.h (copy secrets.example.h)
+// Wi-Fi name and password are in secrets.h (copy secrets.example.h)
 #if __has_include("secrets.h")
 #include "secrets.h"
 #else

@@ -3,7 +3,6 @@ import { q } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// Most recent events for the event log (?limit=, max 500)
 export async function GET(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;

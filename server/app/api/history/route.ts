@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic';
 const MAX_POINTS = 1500;            // more points than this only slows the chart down
 const MAX_MINUTES = 60 * 24 * 30;   // 30 days
 
-// Readings of the last ?minutes= for the history chart, thinned to about MAX_POINTS points
 export async function GET(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;

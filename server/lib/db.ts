@@ -15,7 +15,6 @@ if (!globalForDb.iotProjectPool) {
 
 export const pool = globalForDb.iotProjectPool;
 
-// Runs one SQL query with $1, $2, ... parameters
 export function q<T extends Record<string, any> = Record<string, any>>(sql: string, params: unknown[] = []) {
   return pool.query<T>(sql, params);
 }
@@ -93,13 +92,11 @@ export async function logEvent(
   }
 }
 
-// Reads one value from the settings table, or null when it was never saved
 export async function readSetting(key: string) {
   const result = await q<{ value: string }>('SELECT value FROM settings WHERE key = $1', [key]);
   return result.rows[0]?.value ?? null;
 }
 
-// Saves one key/value in the settings table (insert or overwrite)
 export async function saveSetting(key: string, value: string) {
   await q(
     'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
@@ -107,14 +104,12 @@ export async function saveSetting(key: string, value: string) {
   );
 }
 
-// Converts a JSON value to a number, or null when it is missing or not a number
 export function num(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-// Current Unix time in seconds
 export function now() {
   return Math.floor(Date.now() / 1000);
 }

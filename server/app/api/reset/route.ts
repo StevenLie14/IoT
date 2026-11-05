@@ -4,7 +4,7 @@ import { broadcast, store } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-// Deletes every stored reading and event. Settings (the current label) are kept.
+// Settings (the current label) are kept
 export async function POST(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;

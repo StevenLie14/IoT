@@ -4,7 +4,6 @@ import { TOPIC_BASE, broadcast, health, store, type ServerReading } from './stor
 
 const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 
-// Stores one reading (unless recording is paused) and sends it live to the dashboards
 async function saveReading(message: Record<string, unknown>, source: string) {
   const epoch = now();
   const values = COLS.map((column) => (TEXT_COLS.has(column) ? message[column] ?? null : num(message[column])));
@@ -26,7 +25,6 @@ async function saveReading(message: Record<string, unknown>, source: string) {
   broadcast('reading', reading);
 }
 
-// Stores one device event and sends it live to the dashboards
 async function saveEvent(message: Record<string, unknown>, source: string) {
   const event = {
     epoch: now(),
@@ -40,7 +38,6 @@ async function saveEvent(message: Record<string, unknown>, source: string) {
   broadcast('event', event);
 }
 
-// Connects to the database and the MQTT broker, then saves everything the ESP32 publishes
 async function startIngest() {
   if (store.started) return;
   store.started = true;
@@ -101,7 +98,6 @@ async function startIngest() {
   setInterval(() => broadcast('health', health()), 5000);
 }
 
-// Called once when the server starts (see instrumentation.ts); exits if startup fails
 export function boot() {
   if (!process.env.DASHBOARD_PASSWORD) {
     console.warn('DASHBOARD_PASSWORD is not set, so the dashboard has no login. Only do this on localhost.');

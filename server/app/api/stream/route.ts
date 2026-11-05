@@ -3,7 +3,6 @@ import { health, store } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-// Server-Sent Events stream: each open dashboard gets readings, events and health as they happen
 export async function GET(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;
@@ -12,7 +11,6 @@ export async function GET(request: Request) {
   let listener: ((event: string, data: unknown) => void) | null = null;
   let keepAlive: ReturnType<typeof setInterval> | null = null;
 
-  // Stops sending to this browser once it disconnects
   function cleanUp() {
     if (listener) store.listeners.delete(listener);
     if (keepAlive) clearInterval(keepAlive);

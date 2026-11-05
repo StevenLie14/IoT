@@ -4,7 +4,7 @@ import { broadcast, health, store } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-// Sets the label attached to new readings ("" = no label) and remembers it across restarts
+// "" = no label
 export async function POST(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;

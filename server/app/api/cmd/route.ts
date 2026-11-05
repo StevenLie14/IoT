@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic';
 
 const ALLOWED = ['change', 'stop', 'auto', 'beep', 'drain', 'fill', 'drain_float', 'fill_float'];
 
-// Forwards a dashboard command to the ESP32 over MQTT (only commands in ALLOWED) and logs it
 export async function POST(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;

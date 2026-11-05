@@ -19,7 +19,6 @@ const RANGES = [
 
 const MAX_POINTS = 1500;
 
-// The values one reading adds to a chart (one per line in that chart)
 function valuesFor(name: ChartName, row: Reading): (number | null)[] {
   if (name === 'score') return [row.score, row.tds];
   if (name === 'turbidity') return [row.turb];
@@ -27,7 +26,6 @@ function valuesFor(name: ChartName, row: Reading): (number | null)[] {
   return [row.drain, row.fill];
 }
 
-// Builds the four charts with the current theme colours
 function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
   const colors = {
     ink: cssVar('--ink'),
@@ -45,7 +43,6 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
   Chart.defaults.font.size = 11;
   Chart.defaults.color = colors.ink3;
 
-  // Shared line chart settings; each chart only passes its lines and axes
   function lineChart(canvas: HTMLCanvasElement, datasets: object[], scales: Record<string, object> = {}) {
     return new Chart(canvas, {
       type: 'line',
@@ -120,7 +117,6 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
   return charts;
 }
 
-// History charts: loads the chosen time range, then appends each new live reading
 export default function HistoryPanel({ latest }: { latest: Reading | null }) {
   const [minutes, setMinutes] = useState(30);
   const [error, setError] = useState('');
@@ -182,7 +178,6 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
     }
   }, [latest]);
 
-  // Canvas wrapper that registers itself so createCharts() can draw into it
   function chartBox(name: ChartName) {
     return (
       <div className="box">

@@ -6,7 +6,6 @@ type Props = {
   lastChange: LogEvent | null;
 };
 
-// Big health score with its meter, auto mode and the time of the last water change
 export default function HealthPanel({ reading, lastChange }: Props) {
   const score = reading?.score ?? null;
   const hasScore = score !== null;
