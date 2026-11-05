@@ -33,7 +33,6 @@ DeviceAddress tempAddr;
 float tTank = NAN;
 float tdsV = 0, tdsPpm = 0;
 float turbV = 0, turbIdx = 0;
-float vccV = 0;   // supply voltage seen on ADS A3
 int   score = 100;
 int   mlClass = -1;      // on-device water-condition prediction (-1 = no model)
 float mlConf = 0;        // share of trees that voted for mlClass (0..1)
@@ -526,7 +525,6 @@ void publishData() {
   doc["tds_v"] = roundf(tdsV * 1000) / 1000;
   doc["turb"] = roundf(turbIdx * 10) / 10;
   doc["turb_v"] = roundf(turbV * 1000) / 1000;
-  doc["vcc"] = roundf(vccV * 1000) / 1000;
   doc["f_top"] = floatTop() ? 1 : 0;
   doc["f_bot"] = floatBot() ? 1 : 0;
   doc["score"] = score;
@@ -757,7 +755,6 @@ void sensorCycle() {
   } else if (phase == 3 && t >= 1900) {
     if (adsOk) {
       turbV = readVoltsMedian(ADS_CH_TURB) * DIVIDER_RATIO;
-      vccV = readVoltsMedian(ADS_CH_VCC) * VCC_DIVIDER_RATIO;
       // 0 = as clear as calibration, 100 = TURB_V_SPAN volts darker
       turbIdx = (TURB_V_CLEAR - turbV) / TURB_V_SPAN * 100.0f;
       turbIdx = constrain(turbIdx, 0.0f, 100.0f);
