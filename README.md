@@ -7,7 +7,7 @@ iot/
 ├─ firmware/iot_project/    Firmware ESP32 (sensor, skor, aturan otomatis, MQTT)
 │   ├─ iot_project.ino
 │   ├─ config.h             SEMUA pengaturan dan kalibrasi ada di sini
-│   └─ secrets.example.h    Template Wi-Fi dan login MQTT (salin ke secrets.h, tidak di-commit)
+│   └─ secrets.example.h    Template Wi-Fi (salin ke secrets.h, tidak di-commit)
 ├─ server/                  Next.js full-stack (React + API): MQTT -> PostgreSQL, dashboard, ekspor CSV
 │   ├─ app/                 Halaman (dashboard, login) dan API (app/api/*/route.ts)
 │   ├─ components/          Komponen React (Dashboard, LoginForm)
@@ -153,34 +153,6 @@ Buka http://localhost:7575.
 
 **Tanpa `DASHBOARD_PASSWORD`, dashboard tidak punya login dan siapa pun bisa menyalakan pompa.**
 Selalu isi password kalau dashboard bisa diakses dari internet.
-
-## 5. Broker MQTT privat (user, password, TLS)
-
-broker.hivemq.com itu publik: siapa pun yang tahu nama topiknya bisa membaca data dan mengirim perintah ke ESP32. Semua bagian sudah mendukung broker dengan login dan TLS; selama belum diisi, semuanya tetap memakai broker publik.
-
-1. Buat cluster gratis di HiveMQ Cloud (Serverless). Catat host-nya, misalnya `abcd1234.s1.eu.hivemq.cloud`.
-2. Di menu Access Management cluster itu, buat dua credential: satu untuk ESP32, satu untuk server.
-3. Firmware, di `config.h`:
-   ```c
-   #define MQTT_HOST     "abcd1234.s1.eu.hivemq.cloud"
-   #define MQTT_PORT     8883
-   #define MQTT_USE_TLS  true
-   ```
-   dan di `secrets.h` (tidak di-commit):
-   ```c
-   #define MQTT_USER     "esp32-user"
-   #define MQTT_PASS     "password-esp32"
-   ```
-   Sertifikat root (ISRG Root X1, berlaku sampai 2035) sudah ada di `mqtt_ca.h`.
-4. Server dan Node-RED: tambahkan ke Vault, lalu deploy ulang:
-   ```
-   MQTT_URL=mqtts://abcd1234.s1.eu.hivemq.cloud:8883
-   MQTT_USER=server-user
-   MQTT_PASSWORD=password-server
-   ```
-5. Simulator dan Node-RED di laptop memakai variabel yang sama (`MQTT_URL`, `MQTT_USER`, `MQTT_PASSWORD`).
-
-Di Serial Monitor, `MQTT connect failed, state 5` berarti user atau password salah, dan `state -2` berarti koneksi atau TLS gagal (cek host, port 8883, dan jam NTP).
 
 ## Status pengujian
 
