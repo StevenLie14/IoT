@@ -42,8 +42,6 @@ let lowCount = 0;
 let cooldownUntil = 0;
 
 const client = mqtt.connect(MQTT_URL, {
-  username: process.env.MQTT_USER || undefined,
-  password: process.env.MQTT_PASSWORD || undefined,
   will: { topic: `${TOPIC_BASE}/status`, payload: 'offline', retain: true },
 });
 

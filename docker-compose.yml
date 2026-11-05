@@ -20,8 +20,6 @@ services:
       - PGPASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - PGDATABASE=${DB_NAME:-iot_project}
       - MQTT_URL=${MQTT_URL:-mqtt://broker.hivemq.com:1883}
-      - MQTT_USER=${MQTT_USER:-}
-      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
       - TOPIC_BASE=${TOPIC_BASE:-iot-project/steven-2802941592}
       - DASHBOARD_USER=${DASHBOARD_USER:-admin}
       - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
@@ -61,8 +59,6 @@ services:
     environment:
       - PORT=1880
       - MQTT_URL=${MQTT_URL:-mqtt://broker.hivemq.com:1883}
-      - MQTT_USER=${MQTT_USER:-}
-      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
       - DASHBOARD_USER=${DASHBOARD_USER:-admin}
       - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:?DASHBOARD_PASSWORD is required}
     networks:

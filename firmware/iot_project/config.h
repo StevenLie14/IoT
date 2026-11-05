@@ -9,9 +9,8 @@
 #else
 #error "secrets.h not found: copy secrets.example.h to secrets.h and fill it in"
 #endif
-#define MQTT_HOST     "broker.hivemq.com"   // e.g. "xxxx.s1.eu.hivemq.cloud" for a private broker
-#define MQTT_PORT     1883                  // 8883 when MQTT_USE_TLS is true
-#define MQTT_USE_TLS  false                 // true: encrypted connection, checked against mqtt_ca.h
+#define MQTT_HOST     "broker.hivemq.com"   // public broker, no login
+#define MQTT_PORT     1883
 // Use something unique so nobody else on the public broker uses the same topics
 #define TOPIC_BASE    "iot-project/steven-2802941592"
 

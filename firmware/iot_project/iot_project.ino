@@ -5,7 +5,6 @@
 // All settings are in config.h.
 
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
 #include <time.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -17,18 +16,13 @@
 #include <ArduinoJson.h>
 #include "config.h"
 #include "water_model.h"   // random forest exported by ml/export_tree.py
-#include "mqtt_ca.h"
 
 // ---------------- Objects ----------------
 Adafruit_SSD1306 oled(128, 64, &Wire, -1);
 Adafruit_ADS1115 ads;
 OneWire oneWire(PIN_TEMP);
 DallasTemperature temps(&oneWire);
-#if MQTT_USE_TLS
-WiFiClientSecure netClient;
-#else
 WiFiClient netClient;
-#endif
 PubSubClient mqtt(netClient);
 
 bool oledOk = false, adsOk = false;
@@ -504,17 +498,10 @@ void keepConnected() {
     return;
   }
 
-  // TLS checks certificate dates, so wait until NTP has set the clock
-  if (MQTT_USE_TLS && epochNow() == 0) {
-    mqtt.loop();
-    return;
-  }
   if (!mqtt.connected() && millis() - lastMqttTry > 5000) {
     lastMqttTry = millis();
     String id = "iot-project-" + String((uint32_t)ESP.getEfuseMac(), HEX);
-    const char* user = strlen(MQTT_USER) ? MQTT_USER : nullptr;
-    const char* pass = strlen(MQTT_USER) ? MQTT_PASS : nullptr;
-    if (mqtt.connect(id.c_str(), user, pass, topic("status").c_str(), 1, true, "offline")) {
+    if (mqtt.connect(id.c_str(), topic("status").c_str(), 1, true, "offline")) {
       mqtt.publish(topic("status").c_str(), "online", true);
       mqtt.subscribe(topic("cmd").c_str());
       Serial.println("MQTT connected");
@@ -821,9 +808,6 @@ void setup() {
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   lastWifiTry = millis();
   configTime(7 * 3600, 0, "pool.ntp.org", "time.google.com");   // WIB
-#if MQTT_USE_TLS
-  netClient.setCACert(MQTT_ROOT_CA);
-#endif
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setBufferSize(1024);
   mqtt.setCallback(onMqtt);
