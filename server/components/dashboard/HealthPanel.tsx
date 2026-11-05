@@ -44,7 +44,6 @@ export default function HealthPanel({ reading, lastChange }: Props) {
           <dd>{autoText}</dd>
           <dt>Last water change</dt>
           <dd>{lastChangeText}</dd>
-          {reading?.source === 'sim' && (<><dt>Source</dt><dd>Simulator</dd></>)}
         </dl>
       </div>
     </div>
