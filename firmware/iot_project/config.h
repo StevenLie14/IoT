@@ -61,4 +61,3 @@
 #define DRAIN_TIMEOUT_MS 120000UL // drain longer than this without the bottom float = fault
 #define FILL_TIMEOUT_MS 120000UL // fill longer than this without the top float = fault
 #define PUMP_QUIET_MS 5000UL // readings during a pump run and this long after it do not count for the rules
-#define TEMP_HOLD_MS 60000UL // keep the last good temperature this long when reads fail

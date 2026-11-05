@@ -684,12 +684,7 @@ void drawOled() {
   oled.display();
 }
 
-// Reads by stored address (no bus search) and retries the read a few times.
-// Failed reads are skipped silently: the last good value is kept for up to TEMP_HOLD_MS,
-// since tank temperature changes slowly. Only when there has been no good reading for
-// that long (also counted from boot) is t_tank set to null and an alert logged, once.
-uint32_t tempOkAt = 0;
-bool tempAlerted = false;
+// A failed read leaves t_tank empty, and that reading is not published
 void readTemperature() {
   float v = DEVICE_DISCONNECTED_C;
   // Not found at boot (or lost): search the bus again so a loose wire can recover without a reset
@@ -707,20 +702,12 @@ void readTemperature() {
     bool valid = v > -55 && v < 125 && v != 85.0f;
     if (valid) {
       tTank = v;
-      tempOkAt = millis();
-      tempAlerted = false;
       return;
     }
     delay(5);
   }
 
-  if (!tempAlerted && millis() - tempOkAt > TEMP_HOLD_MS) {
-    tTank = NAN;
-    tempAlerted = true;
-    const char* hint = v <= -127 ? "no answer, check the data wire and the 4.7k pull-up"
-                                 : "power-on value, check the power wire";
-    Serial.printf("DS18B20 ALERT: no good reading for %lu s (%.1f): %s\n", TEMP_HOLD_MS / 1000, v, hint);
-  }
+  tTank = NAN;
 }
 
 // ---------------- Sensor cycle (non-blocking) ----------------
