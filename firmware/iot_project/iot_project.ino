@@ -41,7 +41,7 @@ float mlConf = 0;        // share of trees that voted for mlClass (0..1)
 enum State { IDLE, DRAINING, SETTLING, FILLING };
 const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling"};
 State state = IDLE;
-bool autoMode = AUTO_ON_BOOT;
+bool autoMode = false; // off after power-on until "auto on" is sent
 int lowCount = 0;
 int mlDirtyCount = 0;   // R4: confident "dirty" predictions in a row
 uint32_t stateSince = 0, cooldownUntil = 0;
