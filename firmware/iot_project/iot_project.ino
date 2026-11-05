@@ -147,8 +147,8 @@ void updateFloat(FloatInput& f, bool first = false) {
   }
 }
 
-bool floatTop() { return USE_FLOATS && fTop.stable; }
-bool floatBot() { return USE_FLOATS && fBot.stable; }
+bool floatTop() { return fTop.stable; } // tank full
+bool floatBot() { return fBot.stable; } // tank low
 
 // Median of n samples, so a single noisy sample does not count
 float readVoltsMedian(int ch, int n = 11) {
@@ -693,10 +693,8 @@ void setup() {
   pinMode(PIN_RELAY_FILL, OUTPUT);  relay(PIN_RELAY_FILL, false);
   pinMode(PIN_BUZZER, OUTPUT); digitalWrite(PIN_BUZZER, LOW);
   pinMode(PIN_TDS_POWER, OUTPUT); digitalWrite(PIN_TDS_POWER, LOW);
-  if (USE_FLOATS) {
-    pinMode(PIN_FLOAT_TOP, INPUT_PULLUP); pinMode(PIN_FLOAT_BOT, INPUT_PULLUP);
-    updateFloat(fTop, true); updateFloat(fBot, true);
-  }
+  pinMode(PIN_FLOAT_TOP, INPUT_PULLUP); pinMode(PIN_FLOAT_BOT, INPUT_PULLUP);
+  updateFloat(fTop, true); updateFloat(fBot, true);
 
   Wire.begin(PIN_SDA, PIN_SCL);
   bool foundOled = false, foundAds = false;
@@ -728,7 +726,7 @@ void setup() {
 }
 
 void loop() {
-  if (USE_FLOATS) { updateFloat(fTop); updateFloat(fBot); }
+  updateFloat(fTop); updateFloat(fBot);
   keepConnected();
   handleSerial();
   runStateMachine();

@@ -30,7 +30,6 @@
 #define ADS_CH_TURB 1
 #define ADS_CH_VCC 3 // supply monitor (see VCC_DIVIDER_RATIO)
 
-#define USE_FLOATS true // top float = tank full, bottom float = tank low
 #define RELAY_ACTIVE_LOW true
 
 #define DIVIDER_RATIO 1.5f // 10k / 20k divider on the turbidity output
