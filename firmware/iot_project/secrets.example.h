@@ -1,5 +1,5 @@
-// Copy this file to secrets.h (same folder) and fill in your Wi-Fi name and password.
-// secrets.h is in .gitignore, so the password never ends up in the repo.
+
+// Wifi Config
 #pragma once
 
 #define WIFI_SSID "YOUR_WIFI_NAME"

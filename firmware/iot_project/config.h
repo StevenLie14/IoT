@@ -1,26 +1,25 @@
-// ===== IoT Project configuration =====
-// Edit this file only. Values marked (CAL) come from your own calibration.
 #pragma once
 
-// ---------- Wi-Fi and MQTT ----------
-// Wi-Fi name/password and MQTT login live in secrets.h (copy secrets.example.h)
+// Wi-Fi name and password are set in secrets.h, so copy secrets.example.h to secrets.h and fill the wifi config
 #if __has_include("secrets.h")
 #include "secrets.h"
 #else
 #error "secrets.h not found: copy secrets.example.h to secrets.h and fill it in"
 #endif
-#define MQTT_HOST "broker.hivemq.com" // public broker, no login
+
+
+// MQTT Config and topic
+#define MQTT_HOST "broker.hivemq.com"
 #define MQTT_PORT 1883
-// Use something unique so nobody else on the public broker uses the same topics
 #define TOPIC_BASE "iot-project/steven-2802941592"
 
-// ---------- Pins (ESP32 30-pin on expansion board) ----------
+// PIN Configuration based on IoT
 #define PIN_SDA 21
 #define PIN_SCL 22
-#define PIN_TEMP 4 // DS18B20 data, 4.7k pull-up to 3.3V
-#define PIN_TDS_POWER 13 // TDS board VCC (switched by firmware)
-#define PIN_RELAY_DRAIN 26 // relay IN1 -> drain pump
-#define PIN_RELAY_FILL 25 // relay IN2 -> fill pump
+#define PIN_TEMP 4
+#define PIN_TDS_POWER 13
+#define PIN_RELAY_DRAIN 26
+#define PIN_RELAY_FILL 25
 #define PIN_BUZZER 33
 #define PIN_FLOAT_TOP 18
 #define PIN_FLOAT_BOT 19
@@ -30,32 +29,36 @@
 #define ADS_CH_TDS 0
 #define ADS_CH_TURB 1
 
-// ---------- Parts that are fitted ----------
 #define RELAY_ACTIVE_LOW true
 
-// ---------- Calibration (CAL) ----------
-#define DIVIDER_RATIO 1.5f // 10k / 20k divider on the turbidity output
-#define TURB_V_CLEAR 1.75f // (CAL) turbidity sensor voltage in clean water
-#define TURB_V_SPAN 0.55f // (CAL) volts darker than clear = index 100
-#define TDS_K 1.00f // (CAL) TDS pen ppm / firmware ppm
-#define TDS_GOOD 300.0f // (CAL) refill-water ppm + 100
-#define TDS_BAD 700.0f // (CAL) refill-water ppm + 400
-#define FLOAT_TOP_TRIGGERED_LEVEL HIGH // switch opens when the float rises (tested)
-#define FLOAT_BOT_TRIGGERED_LEVEL LOW // same float type: closes when the float drops
-#define FLOAT_DEBOUNCE_MS 500 // a float must hold its new state this long to count
+// 10k / 20k divider (resistornya)
+#define DIVIDER_RATIO 1.5f
+#define TURB_V_CLEAR 1.75f
+#define TURB_V_SPAN 0.55f
+#define TDS_K 1.00f
+#define TDS_GOOD 300.0f
+#define TDS_BAD 700.0f
+#define FLOAT_TOP_TRIGGERED_LEVEL HIGH
+#define FLOAT_BOT_TRIGGERED_LEVEL LOW
+#define FLOAT_DEBOUNCE_MS 500
 
-// ---------- Automation ----------
-#define SCORE_THRESHOLD 60 // R1, only without a model
+#define SCORE_THRESHOLD 60
+
+// Config berapa x consecutive read dan cooldowny brp lama
 #define LOW_READINGS_TO_ACT 5
-#define COOLDOWN_MS 1800000UL // 30 min
-#define SETTLE_MS 3000UL // pause between drain and fill
+#define COOLDOWN_MS 1800000UL
 
-// R4 (AI): the on-device model starts the water change. The score rule (R1) above is only
-// used when water_model.h holds no trained model.
-#define ML_DIRTY_READINGS 5 // "dirty" this many readings in a row (about 15 s) before acting
-#define ML_MIN_CONFIDENCE 0.6f // a "dirty" prediction only counts when at least 60 % of the trees agree
-#define CYCLE_MS 3000UL // sensor cycle and publish interval
+// Rule AI (R4): model harus bilang dirty 5x berturut-turut dan yakin minimal 60% (6 dari 10 tree setuju)
+// SCORE_THRESHOLD dan LOW_READINGS_TO_ACT (R1) cuma dipake kalau ga ada model
+#define ML_DIRTY_READINGS 5
+#define ML_MIN_CONFIDENCE 0.6f
 
-// ---------- Safety ----------
-#define DRAIN_TIMEOUT_MS 120000UL // drain longer than this without the bottom float = fault
-#define FILL_TIMEOUT_MS 120000UL // fill longer than this without the top float = fault
+// Delay 3 detik dari drain, bis tu fill
+#define SETTLE_MS 3000U
+
+// cycle sensor tiap 3 detik
+#define CYCLE_MS 3000UL
+
+// pump max 2 menit kalau lebih dari itu fault (takot bocor)
+#define DRAIN_TIMEOUT_MS 120000UL
+#define FILL_TIMEOUT_MS 120000UL
