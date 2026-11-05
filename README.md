@@ -32,7 +32,7 @@ iot/
 | Dataset minimal 1.000 baris | Ekspor CSV dari dashboard. 1.000 baris = sekitar 33 menit logging |
 | Model AI terintegrasi, prediksi real-time | Random Forest (10 tree) jalan langsung di ESP32 tiap 3 detik, dikirim sebagai `ml` dan `ml_conf` lewat MQTT |
 | Dashboard: prediksi, confidence, tren, aktuator | Kartu "Condition (model)" dengan confidence, grafik "Model prediction" di History, "Last automatic trigger", status pompa. Node-RED punya grup "AI model" yang sama |
-| Aktuator dikontrol AI | Aturan R4: model bilang `dirty` (minimal 60% tree setuju) lima kali berturut-turut → buzzer 3 beep, ganti air otomatis. Bisa dimatikan dengan `ML_RULE_ENABLED` di `config.h` |
+| Aktuator dikontrol AI | Aturan R4: model bilang `dirty` (minimal 60% tree setuju) lima kali berturut-turut → buzzer 3 beep, ganti air otomatis. Ini satu-satunya pemicu ganti air otomatis; R1 hanya dipakai kalau firmware di-compile tanpa model |
 | Evaluasi dan perbandingan dengan rule-based | Notebook bagian 11: metrik AI (R4) vs rule-based (R1), simulasi trigger pompa, dan uji ketahanan saat tegangan turbidity turun |
 
 ## 1. Firmware ESP32
@@ -152,7 +152,7 @@ untuk menulis `firmware/iot_project/water_model.h`: tiap tree jadi `if-else` dan
 ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY) dan mengirimnya sebagai field `ml` di data MQTT,
 bersama `ml_conf` (bagian tree yang setuju, 0 sampai 1), sehingga muncul di kartu prediksi dan grafik tren pada dashboard
 dan tersimpan di kolom `ml` / `ml_conf` database. Kalau mode auto nyala, prediksi `dirty` lima kali berturut-turut
-memicu ganti air (aturan R4), di samping aturan skor R1.
+memicu ganti air (aturan R4). Aturan skor R1 tidak dipakai selama model ada; skor tetap dihitung dan ditampilkan.
 
 **Isi CSV dataset** (`/api/export.csv`, hanya data dari ESP32): `timestamp_wib`, `t_tank`, `tds`, `tds_v`, `turb`, `turb_v`, `label`.
 Baris saat pompa jalan dan 5 detik sesudahnya tidak ikut diekspor (terganggu gelembung). Data simulator: `?source=sim`.

@@ -14,7 +14,7 @@ export default function HealthPanel({ reading, lastChange, lastTrigger }: Props)
   const meterWidth = hasScore ? Math.min(100, Math.max(0, score)) : 0;
 
   let autoText = '--';
-  if (reading) autoText = reading.auto ? 'On (score rule + AI model)' : 'Off';
+  if (reading) autoText = reading.auto ? 'On (AI model)' : 'Off';
 
   // Which rule started the latest automatic change: R1 = health score, R4 = the AI model
   let triggerText = '--';

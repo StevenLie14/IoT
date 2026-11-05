@@ -340,13 +340,13 @@ bool mlSaysDirty() {
   return strcmp(WATER_LABELS[mlClass], "dirty") == 0 && mlConf >= ML_MIN_CONFIDENCE;
 }
 
-// R1 (score rule) and R4 (AI rule): called once per sensor cycle after the score is updated
+// R4 (AI rule), or R1 (score rule) without a model: checked once per sensor cycle
 bool turbFault = false;
 void runRules() {
   // A turbidity reading near 0 V means the signal wire is off or the sensor has no power,
-  // not dirty water, so R1 and R4 must not drain the tank on it
+  // not dirty water, so no rule may drain the tank on it
   if (turbV < TURB_V_FAULT) {
-    if (!turbFault) publishEvent("fault", "turbidity", turbV, "sensor reads near 0 V, R1 and R4 paused");
+    if (!turbFault) publishEvent("fault", "turbidity", turbV, "sensor reads near 0 V, automatic change paused");
     turbFault = true;
     lowCount = 0;
     mlDirtyCount = 0;
@@ -355,7 +355,7 @@ void runRules() {
   turbFault = false;
 
   // A running pump sags the 5 V supply and stirs the water, so readings taken while a pump
-  // runs, or within PUMP_QUIET_MS after it stops, do not count toward R1 or R4
+  // runs, or within PUMP_QUIET_MS after it stops, do not count
   bool pumpQuietTime = drainOn || fillOn || millis() - pumpChangedAt < PUMP_QUIET_MS;
   if (pumpQuietTime) {
     lowCount = 0;
@@ -372,11 +372,13 @@ void runRules() {
   bool cooling = (int32_t)(millis() - cooldownUntil) < 0;
   if (!autoMode || state != IDLE || cooling) return;
 
-  // R4 is checked first so a change the model asks for is logged as the AI's decision
-  if (ML_RULE_ENABLED && mlDirtyCount >= ML_DIRTY_READINGS) {
-    publishEvent("rule", "R4", mlConf, String("model predicts dirty (") + (int)roundf(mlConf * 100) + " %) for " + ML_DIRTY_READINGS + " readings");
-    beep(3);
-    startChange("auto R4 (AI)");
+  // The model decides. R1 only runs when the firmware is built without a model.
+  if (WATER_MODEL_AVAILABLE) {
+    if (mlDirtyCount >= ML_DIRTY_READINGS) {
+      publishEvent("rule", "R4", mlConf, String("model predicts dirty (") + (int)roundf(mlConf * 100) + " %) for " + ML_DIRTY_READINGS + " readings");
+      beep(3);
+      startChange("auto R4 (AI)");
+    }
   } else if (lowCount >= LOW_READINGS_TO_ACT) {
     publishEvent("rule", "R1", score, String("score below ") + SCORE_THRESHOLD + " for " + LOW_READINGS_TO_ACT + " readings");
     beep(3);

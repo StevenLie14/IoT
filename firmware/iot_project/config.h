@@ -48,21 +48,21 @@
 #define FLOAT_DEBOUNCE_MS  500        // a float must hold its new state this long to count
 
 // ---------- Automation ----------
-#define SCORE_THRESHOLD        60
+#define SCORE_THRESHOLD        60   // R1, only without a model
 #define LOW_READINGS_TO_ACT     5
 #define COOLDOWN_MS       1800000UL   // 30 min
 #define SETTLE_MS            3000UL   // pause between drain and fill
 
-// R4 (AI): the on-device model starts a water change on its own
-#define ML_RULE_ENABLED      true     // false = the model only predicts, it never drives the pumps
+// R4 (AI): the on-device model starts the water change. The score rule (R1) above is only
+// used when water_model.h holds no trained model.
 #define ML_DIRTY_READINGS       5     // "dirty" this many readings in a row (about 15 s) before acting
 #define ML_MIN_CONFIDENCE    0.6f     // a "dirty" prediction only counts when at least 60 % of the trees agree
 #define CYCLE_MS             3000UL   // sensor cycle and publish interval
 
 // ---------- Safety ----------
 #define AUTO_ON_BOOT          false      // auto mode after power-on; false = wait for "auto on"
-#define TURB_V_FAULT          0.20f      // turbidity below this = wire off or sensor unpowered, R1 is skipped
+#define TURB_V_FAULT          0.20f      // turbidity below this = wire off or sensor unpowered, automatic change paused
 #define DRAIN_TIMEOUT_MS    120000UL     // drain longer than this without the bottom float = fault
 #define FILL_TIMEOUT_MS     120000UL     // fill longer than this without the top float = fault
-#define PUMP_QUIET_MS         5000UL     // readings during a pump run and this long after it do not count for R1
+#define PUMP_QUIET_MS         5000UL     // readings during a pump run and this long after it do not count for the rules
 #define TEMP_HOLD_MS        60000UL   // keep the last good temperature this long when reads fail
