@@ -33,7 +33,7 @@ int   score = 100;
 enum State { IDLE, DRAINING, SETTLING, FILLING };
 const char* STATE_NAMES[] = {"idle", "draining", "settling", "filling"};
 State state = IDLE;
-bool autoMode = AUTO_ON_BOOT;
+bool autoMode = false; // off after power-on until "auto on" is sent
 int lowCount = 0;
 uint32_t stateSince = 0, cooldownUntil = 0;
 

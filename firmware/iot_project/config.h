@@ -47,7 +47,6 @@
 #define SETTLE_MS 3000UL // pause between drain and fill
 #define CYCLE_MS 3000UL // sensor cycle and publish interval
 
-#define AUTO_ON_BOOT false // auto mode after power-on; false = wait for "auto on"
 #define TURB_V_FAULT 0.20f // turbidity below this = wire off or sensor unpowered, R1 is skipped
 #define DRAIN_TIMEOUT_MS 120000UL // drain longer than this without the bottom float = fault
 #define FILL_TIMEOUT_MS 120000UL // fill longer than this without the top float = fault
