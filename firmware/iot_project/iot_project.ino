@@ -94,12 +94,9 @@ void publishEvent(const char* type, const char* name, float value, const String&
   Serial.printf("[event] %s %s %.2f %s\n", type, name, value, detail.c_str());
 }
 
-uint32_t pumpChangedAt = 0;   // last time a pump switched on or off (see PUMP_QUIET_MS)
-
 // Turns the drain pump on/off and logs why. Never runs together with the fill pump.
 void setDrain(bool on, const char* why) {
   if (on == drainOn) return;
-  pumpChangedAt = millis();
   if (on && fillOn) {
     fillOn = false;
     relay(PIN_RELAY_FILL, false);
@@ -112,7 +109,6 @@ void setDrain(bool on, const char* why) {
 // Turns the fill pump on/off and logs why. Never runs together with the drain pump.
 void setFill(bool on, const char* why) {
   if (on == fillOn) return;
-  pumpChangedAt = millis();
   if (on && drainOn) {
     drainOn = false;
     relay(PIN_RELAY_DRAIN, false);
@@ -353,10 +349,8 @@ void runRules() {
   }
   turbFault = false;
 
-  // A running pump sags the 5 V supply and stirs the water, so readings taken while a pump
-  // runs, or within PUMP_QUIET_MS after it stops, do not count
-  bool pumpQuietTime = drainOn || fillOn || millis() - pumpChangedAt < PUMP_QUIET_MS;
-  if (pumpQuietTime) {
+  // A running pump stirs the water, so readings taken while it runs do not count
+  if (drainOn || fillOn) {
     lowCount = 0;
     mlDirtyCount = 0;
     return;
