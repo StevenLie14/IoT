@@ -32,7 +32,6 @@
 #define ADS_CH_VCC 3 // supply monitor (see VCC_DIVIDER_RATIO)
 
 // ---------- Parts that are fitted ----------
-#define USE_FLOATS true // top float = tank full, bottom float = tank low
 #define RELAY_ACTIVE_LOW true
 
 // ---------- Calibration (CAL) ----------

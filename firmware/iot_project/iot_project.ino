@@ -172,8 +172,8 @@ void updateFloat(FloatInput& f, bool first = false) {
 }
 
 // true when the tank is full (top float) / low (bottom float)
-bool floatTop() { return USE_FLOATS && fTop.stable; }
-bool floatBot() { return USE_FLOATS && fBot.stable; }
+bool floatTop() { return fTop.stable; } // tank full
+bool floatBot() { return fBot.stable; } // tank low
 
 // Reads an ADS1115 channel n times and returns the median, which ignores single noisy samples
 float readVoltsMedian(int ch, int n = 11) {
@@ -784,10 +784,8 @@ void setup() {
   pinMode(PIN_RELAY_FILL, OUTPUT);  relay(PIN_RELAY_FILL, false);
   pinMode(PIN_BUZZER, OUTPUT); digitalWrite(PIN_BUZZER, LOW);
   pinMode(PIN_TDS_POWER, OUTPUT); digitalWrite(PIN_TDS_POWER, LOW);
-  if (USE_FLOATS) {
-    pinMode(PIN_FLOAT_TOP, INPUT_PULLUP); pinMode(PIN_FLOAT_BOT, INPUT_PULLUP);
-    updateFloat(fTop, true); updateFloat(fBot, true);
-  }
+  pinMode(PIN_FLOAT_TOP, INPUT_PULLUP); pinMode(PIN_FLOAT_BOT, INPUT_PULLUP);
+  updateFloat(fTop, true); updateFloat(fBot, true);
 
   Wire.begin(PIN_SDA, PIN_SCL);
   bool foundOled = false, foundAds = false;
@@ -820,7 +818,7 @@ void setup() {
 
 // Main loop: everything here is non-blocking so floats and commands react immediately
 void loop() {
-  if (USE_FLOATS) { updateFloat(fTop); updateFloat(fBot); }
+  updateFloat(fTop); updateFloat(fBot);
   keepConnected();
   handleSerial();
   runStateMachine();
