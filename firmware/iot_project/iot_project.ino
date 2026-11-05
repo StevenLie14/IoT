@@ -600,10 +600,7 @@ void drawOled() {
   oled.display();
 }
 
-// A failed read keeps the last good value for up to TEMP_HOLD_MS (tank temperature changes slowly).
-// After that t_tank becomes null and one alert is logged.
-uint32_t tempOkAt = 0;
-bool tempAlerted = false;
+// A failed read leaves t_tank empty, and that reading is not published
 void readTemperature() {
   float v = DEVICE_DISCONNECTED_C;
   // Search the bus again so a loose wire can recover without a reset
@@ -621,20 +618,12 @@ void readTemperature() {
     bool valid = v > -55 && v < 125 && v != 85.0f;
     if (valid) {
       tTank = v;
-      tempOkAt = millis();
-      tempAlerted = false;
       return;
     }
     delay(5);
   }
 
-  if (!tempAlerted && millis() - tempOkAt > TEMP_HOLD_MS) {
-    tTank = NAN;
-    tempAlerted = true;
-    const char* hint = v <= -127 ? "no answer, check the data wire and the 4.7k pull-up"
-                                 : "power-on value, check the power wire";
-    Serial.printf("DS18B20 ALERT: no good reading for %lu s (%.1f): %s\n", TEMP_HOLD_MS / 1000, v, hint);
-  }
+  tTank = NAN;
 }
 
 // The DS18B20 is measured and read while the TDS board is off, because TDS current
