@@ -336,19 +336,7 @@ bool mlSaysDirty() {
 }
 
 // R4 (AI rule), or R1 (score rule) without a model: checked once per sensor cycle
-bool turbFault = false;
 void runRules() {
-  // A turbidity reading near 0 V means the signal wire is off or the sensor has no power,
-  // not dirty water, so no rule may drain the tank on it
-  if (turbV < TURB_V_FAULT) {
-    if (!turbFault) publishEvent("fault", "turbidity", turbV, "sensor reads near 0 V, automatic change paused");
-    turbFault = true;
-    lowCount = 0;
-    mlDirtyCount = 0;
-    return;
-  }
-  turbFault = false;
-
   // A running pump stirs the water, so readings taken while it runs do not count
   if (drainOn || fillOn) {
     lowCount = 0;

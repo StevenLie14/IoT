@@ -57,6 +57,5 @@
 #define CYCLE_MS 3000UL // sensor cycle and publish interval
 
 // ---------- Safety ----------
-#define TURB_V_FAULT 0.20f // turbidity below this = wire off or sensor unpowered, automatic change paused
 #define DRAIN_TIMEOUT_MS 120000UL // drain longer than this without the bottom float = fault
 #define FILL_TIMEOUT_MS 120000UL // fill longer than this without the top float = fault
