@@ -1,27 +1,32 @@
 const crypto = require('crypto');
 
+// Config connect ke MQTT
 process.env.MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 
-const user = process.env.DASHBOARD_USER || 'admin';
-const pass = process.env.DASHBOARD_PASSWORD || '';
+const username = process.env.DASHBOARD_USER || 'admin';
+const password = process.env.DASHBOARD_PASSWORD || '';
 
-function sameText(a, b) {
-  const x = Buffer.from(String(a));
-  const y = Buffer.from(String(b));
-  return x.length === y.length && crypto.timingSafeEqual(x, y);
+function sameText(first, second) {
+  const firstBuffer = Buffer.from(String(first));
+  const secondBuffer = Buffer.from(String(second));
+  return firstBuffer.length === secondBuffer.length && crypto.timingSafeEqual(firstBuffer, secondBuffer);
 }
 
+// Login dashboard
 function authorized(header) {
-  if (!pass) return true;
+  if (!password) return true;
   if (!header || !header.startsWith('Basic ')) return false;
   const [name, ...rest] = Buffer.from(header.slice(6), 'base64').toString().split(':');
-  return sameText(name, user) && sameText(rest.join(':'), pass);
+
+
+  return sameText(name, username) && sameText(rest.join(':'), password); 
 }
 
-function basicAuth(req, res, next) {
-  if (!authorized(req.headers.authorization)) {
-    res.set('WWW-Authenticate', 'Basic realm="IoT Water Quality"');
-    return res.status(401).send('Login required');
+// Middleware
+function basicAuth(request, response, next) {
+  if (!authorized(request.headers.authorization)) {
+    response.set('WWW-Authenticate', 'Basic realm="IoT Water Quality"');
+    return response.status(401).send('Login required');
   }
   next();
 }

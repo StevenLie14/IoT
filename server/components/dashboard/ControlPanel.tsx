@@ -5,25 +5,24 @@ import { SignedOutError, post } from '@/lib/client/api';
 import type { Command, LogEvent, Reading } from '@/lib/client/types';
 
 type Props = {
-  reading: Reading | null;
-  latestEvent: LogEvent | null;
-  deviceOnline: boolean;
+  reading: Reading | null
+  latestEvent: LogEvent | null
+  deviceOnline: boolean
 };
 
-// A command waiting for the ESP32 to confirm it, either by a new reading (isDone)
-// or by a matching event (confirmedBy), within RESPONSE_TIMEOUT_MS
 type Pending = {
-  key: string;
-  command: Command;
-  isDone: (reading: Reading) => boolean;
-  confirmedBy: (event: LogEvent) => boolean;
-  doneMessage: string;
-  eventBefore?: LogEvent | null;
+  key: string
+  command: Command
+  isDone: (reading: Reading) => boolean
+  confirmedBy: (event: LogEvent) => boolean
+  doneMessage: string
+  eventBefore?: LogEvent | null
 };
 
 type Message = { text: string; kind: 'ok' | 'error' | '' };
 
 const RESPONSE_TIMEOUT_MS = 10000;
+
 const WORKING_STATES = ['draining', 'settling', 'filling'];
 
 const changeRequest: Pending = {
@@ -34,7 +33,6 @@ const changeRequest: Pending = {
   doneMessage: 'Water change is running',
 };
 
-// Manual pump test: 3 s run, or until the float when toFloat is true
 function testRequest(pump: 'drain' | 'fill', toFloat = false): Pending {
   const target = pump === 'drain' ? 'the bottom float' : 'the top float';
   return {
@@ -46,7 +44,7 @@ function testRequest(pump: 'drain' | 'fill', toFloat = false): Pending {
   };
 }
 
-// Turns automatic water change on/off
+// Switch automatic waterchange
 function autoRequest(on: boolean): Pending {
   return {
     key: 'auto',
@@ -57,6 +55,7 @@ function autoRequest(on: boolean): Pending {
   };
 }
 
+// Stop req
 const stopRequest: Pending = {
   key: 'stop',
   command: { cmd: 'stop' },
@@ -65,12 +64,10 @@ const stopRequest: Pending = {
   doneMessage: 'Pumps stopped',
 };
 
-// Device controls: water change, stop, modes, and the maintenance pump tests
 export default function ControlPanel({ reading, latestEvent, deviceOnline }: Props) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [message, setMessage] = useState<Message>({ text: '', kind: '' });
 
-  // A pending command is confirmed by a new reading...
   useEffect(() => {
     if (pending && reading && pending.isDone(reading)) {
       setMessage({ text: pending.doneMessage, kind: 'ok' });
@@ -78,7 +75,6 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     }
   }, [reading, pending]);
 
-  // ...or by a matching event, which usually arrives first
   useEffect(() => {
     if (!pending || !latestEvent || latestEvent === pending.eventBefore) return;
     if (pending.confirmedBy(latestEvent)) {
@@ -87,7 +83,6 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     }
   }, [latestEvent, pending]);
 
-  // No confirmation in time: give up and tell the user
   useEffect(() => {
     if (!pending) return;
     const timer = setTimeout(() => {
@@ -97,27 +92,25 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     return () => clearTimeout(timer);
   }, [pending]);
 
-  // Success messages disappear after 6 s; errors stay until the next action
   useEffect(() => {
     if (!message.text || message.kind === 'error') return;
     const timer = setTimeout(() => setMessage({ text: '', kind: '' }), 6000);
     return () => clearTimeout(timer);
   }, [message]);
 
-  // Sends a command through /api/cmd; returns false and shows an error if it fails
   async function sendCommand(command: Command) {
     try {
       await post('/api/cmd', command);
       return true;
-    } catch (err) {
-      if (!(err instanceof SignedOutError)) {
-        setMessage({ text: `Could not send: ${(err as Error).message}`, kind: 'error' });
+    } catch (error) {
+      // Kalau sesi habis, api.ts sudah pindah ke halaman login, tidak perlu pesan
+      if (!(error instanceof SignedOutError)) {
+        setMessage({ text: `Could not send: ${(error as Error).message}`, kind: 'error' });
       }
       return false;
     }
   }
 
-  // Sends a command and waits for the device to confirm it (see Pending)
   async function request(next: Pending) {
     setPending({ ...next, eventBefore: latestEvent });
     setMessage({ text: 'Sent. Waiting for the ESP32...', kind: '' });
@@ -125,7 +118,6 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     if (!sent) setPending(null);
   }
 
-  // The buzzer is not reported back, so a beep is not tracked as pending
   async function beep() {
     const sent = await sendCommand({ cmd: 'beep' });
     if (sent) setMessage({ text: 'Beep sent', kind: 'ok' });
@@ -138,22 +130,18 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
   const tankFull = Boolean(reading?.f_top);
   const tankLow = Boolean(reading?.f_bot);
 
-  // Pump tests only when the device is online, idle and not busy with another command
   const canTest = !disabled && !pending && isIdle;
   const canDrain = canTest && !tankLow;
   const canFill = canTest && !tankFull;
   const lowTitle = 'Bottom float reached: the tank is already low';
   const fullTitle = 'Top float reached: the tank is already full';
 
-  // While the mode change is pending, show the switch in its new position already
   const autoOn = isPending('auto') ? Boolean(pending?.command.on) : Boolean(reading?.auto);
 
-  // CSS class for a button: dims it while its command is pending
   function buttonClass(key: string, extra = '') {
     return ['btn', extra, isPending(key) ? 'is-pending' : ''].filter(Boolean).join(' ');
   }
 
-  // One plain status line: quiet when nothing runs, highlighted when something does
   function statusLine() {
     if (!reading) return { text: 'Waiting for data', active: false };
 
@@ -163,6 +151,7 @@ export default function ControlPanel({ reading, latestEvent, deviceOnline }: Pro
     if (isPending('drain') || isPending('drain_float')) parts.push('Starting drain pump');
     else if (reading.drain) parts.push('Drain pump running');
 
+    
     if (isPending('fill') || isPending('fill_float')) parts.push('Starting fill pump');
     else if (reading.fill) parts.push('Fill pump running');
 

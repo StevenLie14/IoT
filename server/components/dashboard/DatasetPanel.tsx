@@ -6,53 +6,52 @@ import { LABEL_NAMES } from '@/lib/client/format';
 import type { Stats } from '@/lib/client/types';
 
 type Props = {
-  stats: Stats | null;
-  label: string;
-  recording: boolean;
-  onLabelSaved: (label: string) => void;
-  onRecordingSaved: (recording: boolean) => void;
+  stats: Stats | null
+  label: string
+  recording: boolean
+  onLabelSaved: (label: string) => void
+  onRecordingSaved: (recording: boolean) => void
 };
 
+// Label untuk dataset
 const LABEL_OPTIONS = ['', 'clear', 'slightly_turbid', 'dirty'];
 
-// Dataset tools: record on/off, label for new readings, CSV downloads, delete all data
 export default function DatasetPanel({ stats, label, recording, onLabelSaved, onRecordingSaved }: Props) {
   const [message, setMessage] = useState('');
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState(false); 
   const [resetting, setResetting] = useState(false);
   const deviceRows = stats?.device ?? 0;
 
-  // Saves the label for new readings
   async function chooseLabel(next: string) {
     onLabelSaved(next);
     try {
       await post('/api/label', { label: next });
       setMessage(next ? `New readings are labelled "${LABEL_NAMES[next]}"` : 'Labelling is off');
-    } catch (err) {
-      setMessage(`Could not save the label: ${(err as Error).message}`);
+    } catch (error) {
+      setMessage(`Could not save the label: ${(error as Error).message}`);
     }
   }
 
-  // Pauses or resumes storing readings; the switch is put back if the request fails
+  // set Record on atau ga
   async function setRecording(next: boolean) {
     onRecordingSaved(next);
     try {
       await post('/api/recording', { on: next });
       setMessage(next ? 'Recording again' : 'Recording paused: live data still shows, nothing is stored');
-    } catch (err) {
+    } catch (error) {
       onRecordingSaved(!next);
-      setMessage(`Could not change recording: ${(err as Error).message}`);
+      setMessage(`Could not change recording: ${(error as Error).message}`);
     }
   }
 
-  // Deletes every reading and event after the user confirmed
+  // Hapus all reading dan event di database
   async function resetAll() {
     setResetting(true);
     try {
       const result = await post<{ ok: boolean; readings: number; events: number }>('/api/reset', { confirm: 'RESET' });
       setMessage(`Deleted ${result.readings.toLocaleString()} readings and ${result.events.toLocaleString()} events`);
-    } catch (err) {
-      setMessage(`Could not reset: ${(err as Error).message}`);
+    } catch (error) {
+      setMessage(`Could not reset: ${(error as Error).message}`);
     } finally {
       setResetting(false);
       setConfirming(false);
@@ -71,7 +70,6 @@ export default function DatasetPanel({ stats, label, recording, onLabelSaved, on
           <span className="muted">device records</span>
           {!recording && <span className="tag">paused</span>}
         </div>
-        {stats?.sim ? <span className="muted small">{stats.sim.toLocaleString()} simulator rows not counted</span> : null}
 
         <div className="control-group">
           <label className="switch">
@@ -86,8 +84,13 @@ export default function DatasetPanel({ stats, label, recording, onLabelSaved, on
           <div className="segmented" id="labels" role="radiogroup" aria-label="Condition label">
             {LABEL_OPTIONS.map((option) => (
               <label key={option || 'none'}>
-                <input type="radio" name="label" value={option} checked={label === option}
-                  onChange={() => chooseLabel(option)} />
+                <input
+                  type="radio"
+                  name="label"
+                  value={option}
+                  checked={label === option}
+                  onChange={() => chooseLabel(option)}
+                />
                 <span>{option ? LABEL_NAMES[option] : 'None'}</span>
               </label>
             ))}
@@ -95,7 +98,7 @@ export default function DatasetPanel({ stats, label, recording, onLabelSaved, on
           <p className="help">Match the label to the water in the tank. The classifier learns from these rows.</p>
           {stats && stats.labels.length > 0 && (
             <p className="help">
-              {stats.labels.map((item) => `${LABEL_NAMES[item.label] ?? item.label}: ${item.n}`).join(' · ')}
+              {stats.labels.map((item) => `${LABEL_NAMES[item.label] ?? item.label}: ${item.count}`).join(' · ')}
             </p>
           )}
         </div>
@@ -103,8 +106,7 @@ export default function DatasetPanel({ stats, label, recording, onLabelSaved, on
         {message && <p className="help">{message}</p>}
 
         <div className="downloads">
-          <a href="/api/export.csv?source=device">Device CSV</a>
-          <a href="/api/export.csv">All rows</a>
+          <a href="/api/export.csv">Dataset CSV</a>
           <a href="/api/events.csv">Event log CSV</a>
         </div>
 
@@ -114,7 +116,7 @@ export default function DatasetPanel({ stats, label, recording, onLabelSaved, on
           ) : (
             <>
               <p className="help">
-                Delete {(stats?.n ?? 0).toLocaleString()} readings and {(stats?.events ?? 0).toLocaleString()} events?
+                Delete {(stats?.total ?? 0).toLocaleString()} readings and {(stats?.events ?? 0).toLocaleString()} events?
                 This cannot be undone. Download the CSV files first if you need them.
               </p>
               <div className="row">

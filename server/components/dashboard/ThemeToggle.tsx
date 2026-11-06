@@ -2,11 +2,10 @@
 
 import type { ThemeChoice } from '@/hooks/useTheme';
 
-// One small button that cycles Auto -> Light -> Dark
-const NEXT: Record<ThemeChoice, ThemeChoice> = { system: 'light', light: 'dark', dark: 'system' };
-const NAME: Record<ThemeChoice, string> = { system: 'Auto', light: 'Light', dark: 'Dark' };
+// Ini untuk ganti theme 
+const NEXT_THEME: Record<ThemeChoice, ThemeChoice> = { system: 'light', light: 'dark', dark: 'system' };
+const THEME_NAME: Record<ThemeChoice, string> = { system: 'Auto', light: 'Light', dark: 'Dark' };
 
-// Icon for the current theme: half-filled circle (auto), sun (light), moon (dark)
 function Icon({ choice }: { choice: ThemeChoice }) {
   if (choice === 'light') {
     return (
@@ -32,15 +31,14 @@ function Icon({ choice }: { choice: ThemeChoice }) {
 }
 
 type Props = {
-  choice: ThemeChoice;
-  onChange: (choice: ThemeChoice) => void;
+  choice: ThemeChoice
+  onChange: (choice: ThemeChoice) => void
 };
 
-// One button that cycles the theme: auto -> light -> dark
 export default function ThemeToggle({ choice, onChange }: Props) {
-  const label = `Theme: ${NAME[choice]} (click for ${NAME[NEXT[choice]]})`;
+  const label = `Theme: ${THEME_NAME[choice]} (click for ${THEME_NAME[NEXT_THEME[choice]]})`;
   return (
-    <button className="theme-toggle" onClick={() => onChange(NEXT[choice])} title={label} aria-label={label}>
+    <button className="theme-toggle" onClick={() => onChange(NEXT_THEME[choice])} title={label} aria-label={label}>
       <Icon choice={choice} />
     </button>
   );

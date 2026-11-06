@@ -5,14 +5,13 @@ import { SignedOutError, api } from '@/lib/client/api';
 import type { Health, LogEvent, Prediction, Reading, Stats } from '@/lib/client/types';
 
 type LatestResponse = {
-  reading: Reading | null;
-  health: Health;
+  reading: Reading | null
+  health: Health
 };
 
 const MAX_EVENTS = 200;
 const MAX_RECENT = 60;
 
-// All live dashboard data: loads the current state once, then follows the server's SSE stream
 export function useLiveData() {
   const [reading, setReading] = useState<Reading | null>(null);
   const [recent, setRecent] = useState<Reading[]>([]);
@@ -23,30 +22,27 @@ export function useLiveData() {
   const [error, setError] = useState('');
   const [resetCount, setResetCount] = useState(0);
 
-  // Re-fetches the dataset counts from the database
   const refreshStats = useCallback(async () => {
     setStats(await api<Stats>('/api/stats'));
   }, []);
 
-  // Handles a new reading from the stream
+  // Tambahin data masuk ke recent
   const addReading = useCallback((next: Reading) => {
     setReading(next);
     setLastReadingAt(Date.now());
     setRecent((list) => [...list, next].slice(-MAX_RECENT));
-    // Keep the record count live instead of waiting for the next stats refresh
+    // Jumlah record langsung ditambah, tidak nunggu refresh stats berikutnya
     if (next.stored !== 0) {
       setStats((current) => {
         if (!current) return current;
-        const key = next.source === 'sim' ? 'sim' : 'device';
-        return { ...current, n: current.n + 1, [key]: current[key] + 1, first: current.first ?? next.epoch };
+        return { ...current, total: current.total + 1, device: current.device + 1, first: current.first ?? next.epoch };
       });
     }
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false; // true kalau halaman sudah ditutup sebelum data selesai di-load
 
-    // Latest reading, last 10 minutes of history, recent events and dataset counts
     async function loadInitialData() {
       try {
         const latest = await api<LatestResponse>('/api/latest');
@@ -62,23 +58,22 @@ export function useLiveData() {
         setHealth(latest.health);
         setEvents(pastEvents);
         await refreshStats();
-      } catch (err) {
-        if (!(err instanceof SignedOutError)) setError(`Could not load data: ${(err as Error).message}`);
+      } catch (loadError) {
+        if (!(loadError instanceof SignedOutError)) setError(`Could not load data: ${(loadError as Error).message}`);
       }
     }
 
     loadInitialData();
 
-    // Live updates pushed by the server
+    // Real time datanya (SSE)
     const stream = new EventSource('/api/stream');
     stream.addEventListener('reading', (message) => addReading(JSON.parse(message.data)));
     stream.addEventListener('health', (message) => setHealth(JSON.parse(message.data)));
     stream.addEventListener('event', (message) => {
       const event = JSON.parse(message.data);
-      setEvents((list) => [event, ...list].slice(0, MAX_EVENTS));
+      setEvents((list) => [event, ...list].slice(0, MAX_EVENTS)); // event terbaru di paling atas
     });
 
-    // All data was deleted: clear everything on screen and reload
     stream.addEventListener('reset', () => {
       setReading(null);
       setRecent([]);
@@ -98,7 +93,7 @@ export function useLiveData() {
     };
   }, [addReading, refreshStats]);
 
-  // Water condition predicted by the model running on the ESP32
+  // Prediksi model dari reading terakhir (ml = kelas, ml_conf = confidence 0-1)
   const prediction: Prediction | null = reading?.ml
     ? { prediction: reading.ml, confidence: reading.ml_conf ?? null, source: 'random forest on ESP32' }
     : null;
@@ -109,10 +104,10 @@ export function useLiveData() {
     lastReadingAt,
     health,
     setHealth,
-    prediction,
     stats,
     events,
     error,
     resetCount,
+    prediction,
   };
 }

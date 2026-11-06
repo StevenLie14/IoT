@@ -3,7 +3,8 @@ import { health, store } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
-// Server-Sent Events stream: each open dashboard gets readings, events and health as they happen
+
+// connect SSE buat dapetin data paling baru
 export async function GET(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;
@@ -12,7 +13,6 @@ export async function GET(request: Request) {
   let listener: ((event: string, data: unknown) => void) | null = null;
   let keepAlive: ReturnType<typeof setInterval> | null = null;
 
-  // Stops sending to this browser once it disconnects
   function cleanUp() {
     if (listener) store.listeners.delete(listener);
     if (keepAlive) clearInterval(keepAlive);
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
 
       listener = send;
       store.listeners.add(listener);
-      // A comment line every 25 s keeps proxies from closing an idle connection
+
       keepAlive = setInterval(() => write(': ping\n\n'), 25000);
 
       request.signal.addEventListener('abort', () => {

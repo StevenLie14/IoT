@@ -1,23 +1,42 @@
 import mqtt from 'mqtt';
-import { COLS, TEXT_COLS, insertReadingSql, logEvent, now, num, q, readSetting, waitForDb } from './db';
+import {
+  READING_COLUMNS,
+  TEXT_COLUMNS,
+  insertReadingSql,
+  logEvent,
+  now,
+  query,
+  readSetting,
+  toNumber,
+  waitForDatabase,
+} from './db';
 import { TOPIC_BASE, broadcast, health, store, type ServerReading } from './store';
 
 const MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 
-// Stores one reading (unless recording is paused) and sends it live to the dashboards
+// Buat simpan data sensor dari MQTT topic data ke readings dan dashboard
 async function saveReading(message: Record<string, unknown>, source: string) {
   const epoch = now();
-  const values = COLS.map((column) => (TEXT_COLS.has(column) ? message[column] ?? null : num(message[column])));
+  const values = READING_COLUMNS.map((column) =>
+    TEXT_COLUMNS.has(column) ? message[column] ?? null : toNumber(message[column]),
+  );
   const label = store.currentLabel || null;
-  // While recording is paused the reading is still shown live but not stored
+
   let id = 0;
   if (store.recording) {
-    const result = await q<{ id: number }>(insertReadingSql, [epoch, num(message.ts), ...values, label, source]);
+    const result = await query<{ id: number }>(insertReadingSql, [epoch, toNumber(message.ts), ...values, label, source]);
     id = result.rows[0].id;
   }
 
-  const reading: ServerReading = { id, epoch, device_ts: num(message.ts), label, source, stored: store.recording ? 1 : 0 };
-  COLS.forEach((column, index) => {
+  const reading: ServerReading = {
+    id,
+    epoch,
+    device_ts: toNumber(message.ts),
+    label,
+    source,
+    stored: store.recording ? 1 : 0,
+  };
+  READING_COLUMNS.forEach((column, index) => {
     reading[column] = values[index] as number | string | null;
   });
 
@@ -26,31 +45,29 @@ async function saveReading(message: Record<string, unknown>, source: string) {
   broadcast('reading', reading);
 }
 
-// Stores one device event and sends it live to the dashboards
 async function saveEvent(message: Record<string, unknown>, source: string) {
   const event = {
     epoch: now(),
     type: String(message.type ?? ''),
     name: (message.name as string) ?? null,
-    value: num(message.value),
+    value: toNumber(message.value),
     detail: (message.detail as string) ?? null,
     source,
   };
-  await logEvent(event.epoch, num(message.ts), event.type, event.name, event.value, event.detail, source);
+  await logEvent(event.epoch, toNumber(message.ts), event.type, event.name, event.value, event.detail, source);
   broadcast('event', event);
 }
 
-// Connects to the database and the MQTT broker, then saves everything the ESP32 publishes
 async function startIngest() {
   if (store.started) return;
   store.started = true;
 
-  await waitForDb();
+  await waitForDatabase();
 
-  // Restore what the dashboard set before the restart
   store.currentLabel = (await readSetting('label')) || '';
-  store.recording = (await readSetting('recording')) !== '0';   // recording is on unless turned off
+  store.recording = (await readSetting('recording')) !== '0';
 
+  // Connect ke MQTT
   const client = mqtt.connect(MQTT_URL, {
     reconnectPeriod: 3000,
     clientId: `iot-project-server-${Math.random().toString(16).slice(2, 8)}`,
@@ -58,15 +75,15 @@ async function startIngest() {
   store.publish = (topic, payload) => client.publish(topic, payload);
 
   client.on('connect', () => {
-    store.mqttUp = true;
+    store.mqttConnected = true;
     client.subscribe([`${TOPIC_BASE}/data`, `${TOPIC_BASE}/event`, `${TOPIC_BASE}/status`]);
     console.log(`MQTT connected to ${MQTT_URL}, topics ${TOPIC_BASE}/#`);
     broadcast('health', health());
   });
 
   client.on('close', () => {
-    if (!store.mqttUp) return;
-    store.mqttUp = false;
+    if (!store.mqttConnected) return;
+    store.mqttConnected = false;
     broadcast('health', health());
   });
 
@@ -76,6 +93,7 @@ async function startIngest() {
     const subtopic = topic.slice(TOPIC_BASE.length + 1);
     const text = payload.toString();
 
+    
     if (subtopic === 'status') {
       store.deviceStatus = text;
       broadcast('health', health());
@@ -89,10 +107,9 @@ async function startIngest() {
       return;
     }
 
-    const source = message.src === 'sim' ? 'sim' : 'device';
     try {
-      if (subtopic === 'data') await saveReading(message, source);
-      if (subtopic === 'event') await saveEvent(message, source);
+      if (subtopic === 'data') await saveReading(message, 'device');
+      if (subtopic === 'event') await saveEvent(message, 'device');
     } catch (error) {
       console.error('Message not saved:', (error as Error).message);
     }
@@ -101,7 +118,6 @@ async function startIngest() {
   setInterval(() => broadcast('health', health()), 5000);
 }
 
-// Called once when the server starts (see instrumentation.ts); exits if startup fails
 export function boot() {
   if (!process.env.DASHBOARD_PASSWORD) {
     console.warn('DASHBOARD_PASSWORD is not set, so the dashboard has no login. Only do this on localhost.');

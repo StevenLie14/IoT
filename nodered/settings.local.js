@@ -1,3 +1,4 @@
+// Config untuk local biar bisa edit di local
 process.env.MQTT_URL = process.env.MQTT_URL || 'mqtt://broker.hivemq.com:1883';
 
 module.exports = {

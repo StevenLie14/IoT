@@ -1,40 +1,38 @@
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
 
+
+// Buat auth
+
 const USERNAME = process.env.DASHBOARD_USER || 'admin';
 const PASSWORD = process.env.DASHBOARD_PASSWORD || '';
 
 export const SESSION_COOKIE = 'iot_project_session';
 export const SESSION_DAYS = 7;
 
-// Secret for signing session cookies; changing the password logs everyone out
 const sessionKey = crypto.createHash('sha256').update(`iot-project-session:${USERNAME}:${PASSWORD}`).digest();
 
-// Login is only required when DASHBOARD_PASSWORD is set
 export function authEnabled() {
   return PASSWORD !== '';
 }
 
-// Constant-time string compare, so response time does not leak how much of a password matched
-function sameText(a: string, b: string) {
-  const left = Buffer.from(String(a));
-  const right = Buffer.from(String(b));
+function sameText(first: string, second: string) {
+  const left = Buffer.from(String(first));
+  const right = Buffer.from(String(second));
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
-// HMAC signature that makes the session cookie tamper-proof
 function sign(data: string) {
   return crypto.createHmac('sha256', sessionKey).update(data).digest('base64url');
 }
 
-// Creates a signed session token that expires after SESSION_DAYS
 export function makeSession() {
   const payload = { user: USERNAME, expires: Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000 };
   const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
   return `${data}.${sign(data)}`;
 }
 
-// Checks the cookie signature and expiry
+// Cek session cookie valid ga
 function isValidSession(token: string | undefined) {
   if (!token) return false;
   const [data, signature] = token.split('.');
@@ -48,28 +46,25 @@ function isValidSession(token: string | undefined) {
   }
 }
 
-// Accepts HTTP Basic auth, for scripts that call the API
 function hasValidBasicAuth(header: string | null) {
   if (!header?.startsWith('Basic ')) return false;
-  const decoded = Buffer.from(header.slice(6), 'base64').toString();
+  const decoded = Buffer.from(header.slice(6), 'base64').toString(); // "username:password"
   const separator = decoded.indexOf(':');
   if (separator < 1) return false;
   return sameText(decoded.slice(0, separator), USERNAME) && sameText(decoded.slice(separator + 1), PASSWORD);
 }
 
-// Checks the username and password from the login form
 export function checkCredentials(username: string, password: string) {
   return sameText(username, USERNAME) && sameText(password, PASSWORD);
 }
 
-// true when the request has a valid session cookie (or login is off)
 export async function isSignedIn() {
   if (!authEnabled()) return true;
   const cookieStore = await cookies();
   return isValidSession(cookieStore.get(SESSION_COOKIE)?.value);
 }
 
-// Guard for API routes: returns a 401 response when not signed in, otherwise null
+// Buat cek tiap api, udh login / blom
 export async function requireAuth(request: Request) {
   if (!authEnabled()) return null;
   if (hasValidBasicAuth(request.headers.get('authorization'))) return null;
@@ -77,7 +72,7 @@ export async function requireAuth(request: Request) {
   return Response.json({ error: 'Not signed in' }, { status: 401 });
 }
 
-// Simple brute-force protection: 10 failed logins from one IP lock it out for 15 minutes
+// Rate limit
 type Attempts = { count: number; since: number };
 
 const MAX_ATTEMPTS = 10;
@@ -86,38 +81,36 @@ const globalForAuth = globalThis as unknown as { iotProjectAttempts?: Map<string
 const failedAttempts = globalForAuth.iotProjectAttempts ?? new Map<string, Attempts>();
 globalForAuth.iotProjectAttempts = failedAttempts;
 
-function currentAttempts(ip: string) {
-  const attempts = failedAttempts.get(ip);
+function currentAttempts(ipAddress: string) {
+  const attempts = failedAttempts.get(ipAddress);
   if (attempts && Date.now() - attempts.since > LOCK_WINDOW_MS) {
-    failedAttempts.delete(ip);
+    failedAttempts.delete(ipAddress);
     return undefined;
   }
   return attempts;
 }
 
-export function isLockedOut(ip: string) {
-  return (currentAttempts(ip)?.count ?? 0) >= MAX_ATTEMPTS;
+export function isLockedOut(ipAddress: string) {
+  return (currentAttempts(ipAddress)?.count ?? 0) >= MAX_ATTEMPTS;
 }
 
-export function recordFailedLogin(ip: string) {
-  const attempts = currentAttempts(ip);
+export function recordFailedLogin(ipAddress: string) {
+  const attempts = currentAttempts(ipAddress);
   if (attempts) attempts.count += 1;
-  else failedAttempts.set(ip, { count: 1, since: Date.now() });
+  else failedAttempts.set(ipAddress, { count: 1, since: Date.now() });
 }
 
-export function clearFailedLogins(ip: string) {
-  failedAttempts.delete(ip);
+export function clearFailedLogins(ipAddress: string) {
+  failedAttempts.delete(ipAddress);
 }
 
-// Client IP, taken from the reverse proxy headers when present
 export function clientIp(request: Request) {
   const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0].trim();
   return forwarded || request.headers.get('x-real-ip') || 'local';
 }
 
-// Whether the original request used HTTPS, so the cookie can be marked Secure
 export function isHttps(request: Request) {
-  const forwardedProto = request.headers.get('x-forwarded-proto');
-  if (forwardedProto) return forwardedProto === 'https';
+  const forwardedProtocol = request.headers.get('x-forwarded-proto');
+  if (forwardedProtocol) return forwardedProtocol === 'https';
   return new URL(request.url).protocol === 'https:';
 }

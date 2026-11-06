@@ -1,17 +1,18 @@
 export type ServerReading = Record<string, number | string | null> & { id: number; epoch: number; source: string };
+
+// Function yg dipanggil untuk kirim ke browser lewat SSE
 type Listener = (event: string, data: unknown) => void;
 
-// In-memory state shared by the MQTT ingest and every API route (latest reading, status, SSE listeners)
 type Store = {
-  latest: ServerReading | null;
-  deviceStatus: string;
-  mqttUp: boolean;
-  lastDataAt: number;
-  currentLabel: string;
-  recording: boolean;
-  listeners: Set<Listener>;
-  started: boolean;
-  publish?: (topic: string, payload: string) => void;
+  latest: ServerReading | null
+  deviceStatus: string
+  mqttConnected: boolean
+  lastDataAt: number
+  currentLabel: string
+  recording: boolean
+  listeners: Set<Listener>
+  started: boolean
+  publish?: (topic: string, payload: string) => void
 };
 
 const globalForStore = globalThis as unknown as { iotProjectStore?: Store };
@@ -20,7 +21,7 @@ if (!globalForStore.iotProjectStore) {
   globalForStore.iotProjectStore = {
     latest: null,
     deviceStatus: 'unknown',
-    mqttUp: false,
+    mqttConnected: false,
     lastDataAt: 0,
     currentLabel: '',
     recording: true,
@@ -31,12 +32,13 @@ if (!globalForStore.iotProjectStore) {
 
 export const store = globalForStore.iotProjectStore;
 
+// Topic yg di subscribe
 export const TOPIC_BASE = process.env.TOPIC_BASE || 'iot-project/steven-2802941592';
 
-// Connection and recording status shown in the dashboard's Health panel
+// Health MQTT, device dkk yg ditampilin di UI
 export function health() {
   return {
-    mqtt: store.mqttUp,
+    mqtt: store.mqttConnected,
     device: store.deviceStatus,
     dataFresh: Date.now() - store.lastDataAt < 15000,
     label: store.currentLabel,
@@ -45,7 +47,6 @@ export function health() {
   };
 }
 
-// Pushes an event to every open dashboard through the SSE stream
 export function broadcast(event: string, data: unknown) {
   for (const listener of store.listeners) listener(event, data);
 }

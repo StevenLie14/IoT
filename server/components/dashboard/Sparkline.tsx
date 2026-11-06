@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { cssVar } from '@/lib/client/format';
+import { cssVariable } from '@/lib/client/format';
 
-// Small trend line of recent values, drawn on a canvas
+
+// Sparkline chart untuk nilai sensor
 export default function Sparkline({ values }: { values: (number | null)[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -18,10 +19,10 @@ export default function Sparkline({ values }: { values: (number | null)[] }) {
       canvas.width = width * ratio;
       canvas.height = height * ratio;
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.scale(ratio, ratio);
-      ctx.clearRect(0, 0, width, height);
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      context.scale(ratio, ratio);
+      context.clearRect(0, 0, width, height);
 
       const points = values.filter((value): value is number => value !== null && value !== undefined);
       if (points.length < 2) return;
@@ -33,16 +34,16 @@ export default function Sparkline({ values }: { values: (number | null)[] }) {
         max += 1;
       }
 
-      ctx.strokeStyle = cssVar('--ink-3');
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
+      context.strokeStyle = cssVariable('--ink-3');
+      context.lineWidth = 1.2;
+      context.beginPath();
       points.forEach((value, index) => {
         const x = (index / (points.length - 1)) * (width - 2) + 1;
-        const y = height - 2 - ((value - min) / (max - min)) * (height - 4);
-        if (index === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        const y = height - 2 - ((value - min) / (max - min)) * (height - 4); // nilai besar = di atas
+        if (index === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
       });
-      ctx.stroke();
+      context.stroke();
     }
 
     draw();

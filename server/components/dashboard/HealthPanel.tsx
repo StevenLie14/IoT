@@ -2,25 +2,26 @@ import { formatTime, scoreLevel, scoreText } from '@/lib/client/format';
 import type { LogEvent, Reading } from '@/lib/client/types';
 
 type Props = {
-  reading: Reading | null;
-  lastChange: LogEvent | null;
-  lastTrigger: LogEvent | null;
+  reading: Reading | null
+  lastChange: LogEvent | null
+  lastTrigger: LogEvent | null
 };
 
-// Big health score with its meter, auto mode and the time of the last water change
+
+// UI Water health
 export default function HealthPanel({ reading, lastChange, lastTrigger }: Props) {
   const score = reading?.score ?? null;
   const hasScore = score !== null;
-  const meterWidth = hasScore ? Math.min(100, Math.max(0, score)) : 0;
+  const meterWidth = hasScore ? Math.min(100, Math.max(0, score)) : 0; // panjang bar dalam persen
 
   let autoText = '--';
   if (reading) autoText = reading.auto ? 'On (AI model)' : 'Off';
 
-  // Which rule started the latest automatic change: R1 = health score, R4 = the AI model
+  // Siapa yang terakhir mulai ganti air otomatis: model (R4) atau score (R1)
   let triggerText = '--';
   if (lastTrigger) {
-    const who = lastTrigger.name === 'R4' ? 'AI model (R4)' : `Score rule (${lastTrigger.name})`;
-    triggerText = `${who}, ${formatTime(lastTrigger.epoch)}`;
+    const trigger = lastTrigger.name === 'R4' ? 'AI model (R4)' : `Score rule (${lastTrigger.name})`;
+    triggerText = `${trigger}, ${formatTime(lastTrigger.epoch)}`;
   }
 
   let lastChangeText = '--';
@@ -37,6 +38,7 @@ export default function HealthPanel({ reading, lastChange, lastTrigger }: Props)
           <span className="score-word">{hasScore ? scoreText(score) : 'Waiting for data'}</span>
         </div>
 
+        {/* <b> = garis di posisi 60 (batas ganti air) */}
         <div className="meter" aria-hidden="true">
           <i style={{ width: `${meterWidth}%` }} />
           <b title="Water change threshold" />
@@ -54,7 +56,6 @@ export default function HealthPanel({ reading, lastChange, lastTrigger }: Props)
           <dd>{lastChangeText}</dd>
           <dt>Last automatic trigger</dt>
           <dd>{triggerText}</dd>
-          {reading?.source === 'sim' && (<><dt>Source</dt><dd>Simulator</dd></>)}
         </dl>
       </div>
     </div>

@@ -12,8 +12,7 @@ iot/
 │   ├─ app/                 Halaman (dashboard, login) dan API (app/api/*/route.ts)
 │   ├─ components/          Komponen React (Dashboard, LoginForm)
 │   ├─ lib/                 Database, MQTT ingest, login
-│   ├─ instrumentation.ts   Menyalakan koneksi MQTT dan database saat server start
-│   └─ tools/simulate.js    ESP32 palsu untuk tes tanpa hardware
+│   └─ instrumentation.ts   Menyalakan koneksi MQTT dan database saat server start
 ├─ nodered/                 Dashboard Node-RED (Dashboard 2.0) dari topik MQTT yang sama
 └─ ml/                      Machine learning (Python)
     ├─ water_quality_models.ipynb  EDA, cleaning, perbandingan 7 model
@@ -82,12 +81,6 @@ Untuk mode produksi: `npm run build` lalu `npm start`.
 Server ini harus berjalan terus (koneksi MQTT selalu tersambung), jadi jalankan di server sendiri
 atau Docker, bukan di platform serverless seperti Vercel.
 
-Tes tanpa hardware (data ditandai `sim` dan tidak ikut di CSV device):
-
-```bash
-npm run sim
-```
-
 Kalau Wi-Fi kampus memblokir MQTT (port 1883), pakai hotspot HP untuk ESP32 dan laptop.
 
 ## 2b. Dashboard Node-RED
@@ -155,7 +148,7 @@ dan tersimpan di kolom `ml` / `ml_conf` database. Kalau mode auto nyala, prediks
 memicu ganti air (aturan R4). Aturan skor R1 tidak dipakai selama model ada; skor tetap dihitung dan ditampilkan.
 
 **Isi CSV dataset** (`/api/export.csv`, hanya data dari ESP32): `timestamp_wib`, `t_tank`, `tds`, `tds_v`, `turb`, `turb_v`, `label`.
-Baris saat pompa jalan dan 5 detik sesudahnya tidak ikut diekspor (terganggu gelembung). Data simulator: `?source=sim`.
+Baris saat pompa jalan dan 5 detik sesudahnya tidak ikut diekspor (terganggu gelembung).
 
 Sebelum model dibuat, `water_model.h` berisi placeholder sehingga firmware tetap bisa di-compile.
 Latih dan ekspor ulang setiap kali sensor dikalibrasi ulang.
@@ -196,7 +189,7 @@ Selalu isi password kalau dashboard bisa diakses dari internet.
 
 ## Status pengujian
 
-- Server, dashboard, simulator, dan aturan otomatis (di simulator) sudah diuji jalan.
+- Server, dashboard, dan aturan otomatis sudah diuji jalan.
 - Skrip ML sudah diuji dengan data sintetis untuk memastikan berjalan. Angka akurasi untuk laporan harus dari data asli Anda.
 - Image Docker sudah diuji jalan (login, data tetap ada setelah restart, health check).
 - Firmware **belum di-compile**; compile dan uji di Arduino IDE Anda.

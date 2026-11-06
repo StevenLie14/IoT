@@ -11,23 +11,22 @@ import { useLiveData } from '@/hooks/useLiveData';
 import { useTheme } from '@/hooks/useTheme';
 import type { LogEvent } from '@/lib/client/types';
 
-// Newest event that marks a finished water change, for the Health panel
+
+// cari kapan ganti air terakhir kali
 function findLastChange(events: LogEvent[]) {
   return events.find((event) => event.type === 'state' && String(event.detail ?? '').startsWith('change done')) ?? null;
 }
 
-// Newest event where a rule (R1 score or R4 AI model) started a water change
+// Cari rule terakhir yang mulai ganti air otomatis (R1 score atau R4 model)
 function findLastTrigger(events: LogEvent[]) {
   return events.find((event) => event.type === 'rule') ?? null;
 }
 
-// The whole dashboard page: loads live data and lays out the panels
 export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
   const live = useLiveData();
   const theme = useTheme();
   const { reading, health } = live;
 
-  // Update the label/recording state on screen right away instead of waiting for the next health update
   function saveLabel(label: string) {
     live.setHealth((current) => (current ? { ...current, label } : current));
   }
@@ -51,6 +50,7 @@ export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
 
         <section className="overview">
           <HealthPanel reading={reading} lastChange={findLastChange(live.events)} lastTrigger={findLastTrigger(live.events)} />
+          {/* key = tema, jadi sparkline digambar ulang dengan warna baru waktu tema diganti */}
           <ReadingsPanel key={theme.resolved} reading={reading} recent={live.recent} prediction={live.prediction} />
         </section>
 
@@ -60,8 +60,13 @@ export default function Dashboard({ authEnabled }: { authEnabled: boolean }) {
             latestEvent={live.events[0] ?? null}
             deviceOnline={health?.device === 'online'}
           />
-          <DatasetPanel stats={live.stats} label={health?.label ?? ''} recording={health?.recording ?? true}
-            onLabelSaved={saveLabel} onRecordingSaved={saveRecording} />
+          <DatasetPanel
+            stats={live.stats}
+            label={health?.label ?? ''}
+            recording={health?.recording ?? true}
+            onLabelSaved={saveLabel}
+            onRecordingSaved={saveRecording}
+          />
         </section>
 
         <HistoryPanel key={`${theme.resolved}-${live.resetCount}`} latest={reading} />

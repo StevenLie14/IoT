@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Username/password form; on success it goes to the dashboard
+
+// Login form
 export default function LoginForm() {
   const router = useRouter();
   const [username, setUsername] = useState('');
@@ -10,19 +11,30 @@ export default function LoginForm() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  // Posts the credentials to /api/login and shows the server's error if it fails
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
     setError('');
-    if (!username.trim() || !password) { setError('Enter your username and password.'); return; }
+    if (!username.trim() || !password) {
+      setError('Enter your username and password.');
+      return;
+    }
     setBusy(true);
     try {
-      const res = await fetch('/api/login', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password }),
       });
-      if (res.ok) { router.replace('/'); router.refresh(); return; }
-      const body = await res.json().catch(() => ({}));
+
+
+      if (response.ok) {
+        router.replace('/');
+        router.refresh();
+        return;
+      }
+
+
+      const body = await response.json().catch(() => ({}));
       setError(body.error || 'Sign in failed.');
       setPassword('');
     } catch {
@@ -42,7 +54,7 @@ export default function LoginForm() {
           autoComplete="username"
           autoFocus
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(event) => setUsername(event.target.value)}
         />
       </div>
       <div className="field">
@@ -52,7 +64,7 @@ export default function LoginForm() {
           type="password"
           autoComplete="current-password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(event) => setPassword(event.target.value)}
         />
       </div>
       <button className="btn primary" type="submit" disabled={busy}>{busy ? 'Signing in' : 'Sign in'}</button>

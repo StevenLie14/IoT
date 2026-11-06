@@ -1,14 +1,14 @@
 import { formatTime } from '@/lib/client/format';
 import type { LogEvent } from '@/lib/client/types';
 
-// One readable line from an event's name, value and detail
 function describe(event: LogEvent) {
   return [event.name, event.value, event.detail]
     .filter((part) => part !== null && part !== undefined && part !== '')
     .join(' · ');
 }
 
-// Table of the most recent device and server events
+
+// Buat log table event
 export default function EventLog({ events }: { events: LogEvent[] }) {
   return (
     <section className="panel">
@@ -27,6 +27,7 @@ export default function EventLog({ events }: { events: LogEvent[] }) {
             {events.map((event, index) => (
               <tr key={`${event.epoch}-${index}`}>
                 <td className="time">{formatTime(event.epoch)}</td>
+                {/* class t-<type> buat warna per jenis event */}
                 <td className="type"><span className={`t-${event.type}`}>{event.type}</span></td>
                 <td>{describe(event)}</td>
               </tr>

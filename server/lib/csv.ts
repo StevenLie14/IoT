@@ -1,4 +1,5 @@
-// Quotes a value when it contains a comma, quote or newline
+// Buat ubah data jadi csv
+
 export function escapeCsv(value: unknown) {
   if (value === null || value === undefined) return '';
   const text = String(value);
@@ -6,12 +7,12 @@ export function escapeCsv(value: unknown) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
-// Unix time to "YYYY-MM-DD HH:MM:SS" in WIB (UTC+7)
+// Waktu Unix -> "YYYY-MM-DD HH:MM:SS" dalam WIB (UTC+7)
 export function toWib(epoch: number) {
   return new Date((epoch + 7 * 3600) * 1000).toISOString().replace('T', ' ').slice(0, 19);
 }
 
-// Builds a downloadable CSV response
+// Bikin response yang langsung ke-download sebagai file CSV
 export function csvResponse(lines: string[], filename: string) {
   return new Response(lines.join('\n'), {
     headers: {

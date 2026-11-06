@@ -2,13 +2,12 @@
   "name": "iot-project",
   "version": "2.0.0",
   "private": true,
-  "description": "IoT Project: Next.js dashboard and API, MQTT ingest, PostgreSQL storage",
+  "description": "Iot Project",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p ${PORT:-3000}",
-    "lint": "tsc --noEmit",
-    "sim": "node tools/simulate.js"
+    "lint": "tsc --noEmit"
   },
   "engines": { "node": ">=20.9" },
   "dependencies": {

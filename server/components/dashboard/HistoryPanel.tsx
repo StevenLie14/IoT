@@ -3,24 +3,26 @@
 import { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
 import { SignedOutError, api } from '@/lib/client/api';
-import { cssVar, formatTime } from '@/lib/client/format';
+import { cssVariable, formatTime } from '@/lib/client/format';
 import type { Reading } from '@/lib/client/types';
 
 type ChartName = 'score' | 'turbidity' | 'temperature' | 'pumps' | 'prediction';
 
-// Model predictions drawn as steps: 0 = clear, 1 = slightly turbid, 2 = dirty
+// Kelas model jadi angka 0 / 1 / 2 supaya bisa digambar di chart
 const PREDICTION_LEVELS = ['clear', 'slightly_turbid', 'dirty'];
 const PREDICTION_TICKS = ['clear', 'slightly turbid', 'dirty'];
 
-function predictionLevel(ml: string | null | undefined) {
-  const level = PREDICTION_LEVELS.indexOf(ml ?? '');
+function predictionLevel(modelClass: string | null | undefined) {
+  const level = PREDICTION_LEVELS.indexOf(modelClass ?? '');
   return level < 0 ? null : level;
 }
 
-function confidencePercent(conf: number | null | undefined) {
-  return conf === null || conf === undefined ? null : Math.round(conf * 100);
+// Confidence 0-1 jadi persen
+function confidencePercent(confidence: number | null | undefined) {
+  return confidence === null || confidence === undefined ? null : Math.round(confidence * 100);
 }
 
+// Range waktu yg bisa dipilih di ui
 const RANGES = [
   { minutes: 10, label: '10m' },
   { minutes: 30, label: '30m' },
@@ -32,7 +34,6 @@ const RANGES = [
 
 const MAX_POINTS = 1500;
 
-// The values one reading adds to a chart (one per line in that chart)
 function valuesFor(name: ChartName, row: Reading): (number | null)[] {
   if (name === 'score') return [row.score, row.tds];
   if (name === 'turbidity') return [row.turb];
@@ -41,31 +42,30 @@ function valuesFor(name: ChartName, row: Reading): (number | null)[] {
   return [row.drain, row.fill];
 }
 
-// Builds the four charts with the current theme colours
 function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
   const colors = {
-    ink: cssVar('--ink'),
-    panel: cssVar('--panel'),
-    ink2: cssVar('--ink-2'),
-    ink3: cssVar('--ink-3'),
-    grid: cssVar('--line-2'),
-    accent: cssVar('--accent'),
-    ok: cssVar('--ok'),
-    warn: cssVar('--warn'),
-    bad: cssVar('--bad'),
+    ink: cssVariable('--ink'),
+    panel: cssVariable('--panel'),
+    ink2: cssVariable('--ink-2'),
+    ink3: cssVariable('--ink-3'),
+    grid: cssVariable('--line-2'),
+    accent: cssVariable('--accent'),
+    ok: cssVariable('--ok'),
+    warn: cssVariable('--warn'),
+    bad: cssVariable('--bad'),
   };
 
-  Chart.defaults.font.family = cssVar('--sans');
+  Chart.defaults.font.family = cssVariable('--sans');
   Chart.defaults.font.size = 11;
   Chart.defaults.color = colors.ink3;
 
-  // Shared line chart settings; each chart only passes its lines and axes
+  // Config line chart
   function lineChart(canvas: HTMLCanvasElement, datasets: object[], scales: Record<string, object> = {}) {
     return new Chart(canvas, {
       type: 'line',
       data: {
         labels: [],
-        datasets: datasets.map((set) => ({ data: [], borderWidth: 1.6, pointRadius: 0, tension: 0.25, ...set })),
+        datasets: datasets.map((dataset) => ({ data: [], borderWidth: 1.6, pointRadius: 0, tension: 0.25, ...dataset })),
       },
       options: {
         responsive: true,
@@ -75,9 +75,13 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
         plugins: {
           legend: { display: false },
           tooltip: {
-            // Inverted colours so the tooltip reads well in both themes
-            backgroundColor: colors.ink, titleColor: colors.panel, bodyColor: colors.panel,
-            padding: 8, cornerRadius: 4, boxPadding: 4,
+            // Warna dibalik supaya tooltip tetap kebaca di tema terang dan gelap
+            backgroundColor: colors.ink,
+            titleColor: colors.panel,
+            bodyColor: colors.panel,
+            padding: 8,
+            cornerRadius: 4,
+            boxPadding: 4,
           },
         },
         scales: {
@@ -106,16 +110,20 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
       { label: 'TDS (ppm)', borderColor: colors.ink2, yAxisID: 'y' },
     ], { percent: percentAxis });
   }
+
   if (canvases.turbidity) {
     charts.turbidity = lineChart(canvases.turbidity, [
       { label: 'Index', borderColor: colors.warn },
     ], { y: { min: 0, max: 100, grid: { color: colors.grid }, border: { display: false }, ticks: { maxTicksLimit: 5 } } });
   }
+
+
   if (canvases.temperature) {
     charts.temperature = lineChart(canvases.temperature, [
       { label: 'Tank (°C)', borderColor: colors.bad },
     ]);
   }
+
   if (canvases.pumps) {
     charts.pumps = lineChart(canvases.pumps, [
       { label: 'Drain', borderColor: colors.bad, backgroundColor: `${colors.bad}22`, fill: true, stepped: true, tension: 0 },
@@ -131,6 +139,7 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
     });
   }
 
+  // Chart prediksi: sumbu kiri kelas (0-2), sumbu kanan confidence (%)
   if (canvases.prediction) {
     charts.prediction = lineChart(canvases.prediction, [
       { label: 'Prediction', borderColor: colors.accent, stepped: true, tension: 0, yAxisID: 'y' },
@@ -153,7 +162,8 @@ function createCharts(canvases: Record<ChartName, HTMLCanvasElement | null>) {
   return charts;
 }
 
-// History charts: loads the chosen time range, then appends each new live reading
+
+// History UI
 export default function HistoryPanel({ latest }: { latest: Reading | null }) {
   const [minutes, setMinutes] = useState(30);
   const [error, setError] = useState('');
@@ -165,7 +175,7 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
     prediction: null,
   });
   const charts = useRef<Partial<Record<ChartName, Chart>>>({});
-  const lastAddedId = useRef<number | null>(null);
+  const lastAddedId = useRef<number | null>(null); // id reading terakhir di chart, supaya tidak dobel
 
   useEffect(() => {
     const created = createCharts(canvases.current);
@@ -177,7 +187,7 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false; // abaikan hasil request lama kalau rentang sudah diganti lagi
 
     api<Reading[]>(`/api/history?minutes=${minutes}`)
       .then((rows) => {
@@ -192,8 +202,8 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
           chart.update();
         }
       })
-      .catch((err) => {
-        if (!cancelled && !(err instanceof SignedOutError)) setError(`Could not load history: ${err.message}`);
+      .catch((loadError) => {
+        if (!cancelled && !(loadError instanceof SignedOutError)) setError(`Could not load history: ${loadError.message}`);
       });
 
     return () => {
@@ -212,11 +222,10 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
         chart.data.labels?.shift();
         chart.data.datasets.forEach((dataset) => dataset.data.shift());
       }
-      chart.update('none');
+      chart.update('none'); // tanpa animasi
     }
   }, [latest]);
 
-  // Canvas wrapper that registers itself so createCharts() can draw into it
   function chartBox(name: ChartName) {
     return (
       <div className="box">
@@ -231,8 +240,11 @@ export default function HistoryPanel({ latest }: { latest: Reading | null }) {
         <h2>History</h2>
         <div className="segmented" id="range" role="group" aria-label="Time range">
           {RANGES.map((range) => (
-            <button key={range.minutes} className={minutes === range.minutes ? 'active' : ''}
-              onClick={() => setMinutes(range.minutes)}>
+            <button
+              key={range.minutes}
+              className={minutes === range.minutes ? 'active' : ''}
+              onClick={() => setMinutes(range.minutes)}
+            >
               {range.label}
             </button>
           ))}

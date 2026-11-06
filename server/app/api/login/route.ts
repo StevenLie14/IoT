@@ -14,12 +14,14 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-// Checks the login form and sets the session cookie; too many failures lock the IP out
+// Buat login ke dashboard lewat cookie 
 export async function POST(request: Request) {
   if (!authEnabled()) return Response.json({ ok: true });
 
-  const ip = clientIp(request);
-  if (isLockedOut(ip)) {
+
+  // DI rate limit
+  const ipAddress = clientIp(request);
+  if (isLockedOut(ipAddress)) {
     return Response.json({ error: 'Too many attempts. Try again in 15 minutes.' }, { status: 429 });
   }
 
@@ -28,14 +30,17 @@ export async function POST(request: Request) {
   const password = String(body.password ?? '');
 
   if (!checkCredentials(username, password)) {
-    recordFailedLogin(ip);
+    recordFailedLogin(ipAddress);
     return Response.json({ error: 'Wrong username or password.' }, { status: 401 });
   }
 
-  clearFailedLogins(ip);
+
+  
+  clearFailedLogins(ipAddress);
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, makeSession(), {
     httpOnly: true,
+
     sameSite: 'lax',
     secure: isHttps(request),
     maxAge: SESSION_DAYS * 24 * 60 * 60,

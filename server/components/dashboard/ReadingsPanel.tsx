@@ -5,24 +5,22 @@ import { LABEL_NAMES, formatNumber } from '@/lib/client/format';
 import type { Prediction, Reading } from '@/lib/client/types';
 
 type Props = {
-  reading: Reading | null;
-  recent: Reading[];
-  prediction: Prediction | null;
+  reading: Reading | null
+  recent: Reading[]
+  prediction: Prediction | null
 };
 
-// What the pumps are doing, in words
+// State pumpnya
 function pumpText(reading: Reading | null) {
   if (reading?.drain) return 'draining to the bottom float';
   if (reading?.fill) return 'refilling to the top float';
   return 'pumps idle';
 }
 
-// Both floats triggered at once is impossible in a real tank, so a float or its wiring is wrong
 function floatsConflict(reading: Reading | null) {
   return Boolean(reading?.f_top && reading?.f_bot);
 }
 
-// Water level derived from the two floats
 function levelText(reading: Reading | null) {
   if (!reading) return '--';
   if (floatsConflict(reading)) return 'check floats';
@@ -31,20 +29,19 @@ function levelText(reading: Reading | null) {
   return 'normal';
 }
 
-// State of one float switch
 function floatText(value: number | null | undefined) {
   if (value === null || value === undefined) return '--';
   return value ? 'triggered' : 'open';
 }
 
-// Which model made the prediction, plus its confidence when known
+// Teks kecil di card Condition, contoh "random forest on ESP32 · 92%"
 function predictionText(prediction: Prediction) {
   const hasConfidence = prediction.confidence !== undefined && prediction.confidence !== null;
   if (!hasConfidence) return prediction.source;
   return `${prediction.source} · ${Math.round(prediction.confidence! * 100)}%`;
 }
 
-// Sensor cards (temperature, TDS, turbidity), water level and the ML prediction
+// UI Sensor
 export default function ReadingsPanel({ reading, recent, prediction }: Props) {
   const temperatureLevel = levelFor(reading?.t_tank, RANGES.temperature);
   const tdsLevel = levelFor(reading?.tds, RANGES.tds);
@@ -97,6 +94,7 @@ export default function ReadingsPanel({ reading, recent, prediction }: Props) {
         )}
       </div>
 
+      {/* Card hasil model, cuma muncul kalau ESP32 mengirim field ml */}
       {prediction && (
         <div className={`reading model ${prediction.prediction}`}>
           <span className="label">Condition (model)</span>

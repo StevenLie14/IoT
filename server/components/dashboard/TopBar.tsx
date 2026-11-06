@@ -6,14 +6,14 @@ import type { ThemeChoice } from '@/hooks/useTheme';
 import type { Health } from '@/lib/client/types';
 
 type Props = {
-  health: Health | null;
-  lastReadingAt: number;
-  canSignOut: boolean;
-  theme: ThemeChoice;
-  onThemeChange: (choice: ThemeChoice) => void;
+  health: Health | null
+  lastReadingAt: number
+  canSignOut: boolean
+  theme: ThemeChoice
+  onThemeChange: (choice: ThemeChoice) => void
 };
 
-// "Last reading 5s ago" style text
+// Navbar
 function lastReadingText(lastReadingAt: number, now: number) {
   if (!lastReadingAt) return 'No readings yet';
   const seconds = Math.max(0, Math.round((now - lastReadingAt) / 1000));
@@ -21,11 +21,9 @@ function lastReadingText(lastReadingAt: number, now: number) {
   return `Last reading ${Math.round(seconds / 60)} min ago`;
 }
 
-// Header: app name, ESP32 and MQTT status, time since the last reading, theme and sign out
 export default function TopBar({ health, lastReadingAt, canSignOut, theme, onThemeChange }: Props) {
   const now = useNow();
   const deviceOnline = health?.device === 'online';
-
 
   async function signOut() {
     await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });

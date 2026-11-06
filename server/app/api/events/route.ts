@@ -1,15 +1,15 @@
 import { requireAuth } from '@/lib/auth';
-import { q } from '@/lib/db';
+import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// Most recent events for the event log (?limit=, max 500)
+// Ambil event terbaru untuk dashboard (default 50, max 500)
 export async function GET(request: Request) {
   const denied = await requireAuth(request);
   if (denied) return denied;
 
   const requested = Number(new URL(request.url).searchParams.get('limit')) || 50;
   const limit = Math.min(requested, 500);
-  const result = await q('SELECT * FROM events ORDER BY id DESC LIMIT $1', [limit]);
+  const result = await query('SELECT * FROM events ORDER BY id DESC LIMIT $1', [limit]);
   return Response.json(result.rows);
 }
