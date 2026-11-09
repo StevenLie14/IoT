@@ -1,7 +1,5 @@
-// Model kualitas air untuk ESP32, dibuat otomatis oleh ml/export_tree.py (micromlgen).
-// Jangan diedit manual, train ulang aja kalau datanya berubah.
-// Random Forest 10 tree, depth 3, 54 node, 1022 data
-// Input: x[0] = tds, x[1] = turb_v | akurasi test: 1.000
+
+// DO NOT EDIT: code ini hasil dari ml/export_tree.py
 #pragma once
 #include <cstdarg>
 namespace Eloquent {
@@ -9,7 +7,7 @@ namespace Eloquent {
         namespace Port {
             class RandomForest {
                 public:
-                    float lastVotes = 0;  // vote kelas pemenang dari prediksi terakhir
+                    float lastVotes = 0;
                     /**
                     * Predict class for features vector
                     */
@@ -229,8 +227,7 @@ static const char* const WATER_SHORT[]  = {"CLEAR", "DIRTY", "SLIGHT"};
 
 #define WATER_MODEL_TREES 10
 
-// Dipanggil dari iot_project.ino, return index ke WATER_LABELS.
-// confidence = berapa bagian tree yang setuju (0..1), contoh 9 dari 10 tree = 0.9
+// function ini panggil dari main ino file yang return WATER LABELS dengan confidence (vote tiap tree)
 inline int classifyWaterFromReadings(float tds, float tds_v, float turb, float turb_v, float t_tank, float* confidence) {
   (void)tds_v; (void)turb; (void)t_tank;  // ga dipakai model
   static Eloquent::ML::Port::RandomForest model;

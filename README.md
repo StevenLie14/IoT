@@ -16,7 +16,7 @@ iot/
 ├─ nodered/                 Dashboard Node-RED (Dashboard 2.0) dari topik MQTT yang sama
 └─ ml/                      Machine learning (Python)
     ├─ water_quality_models.ipynb  EDA, cleaning, perbandingan 7 model
-    └─ export_tree.py              Melatih Random Forest kecil dan menulis water_model.h untuk ESP32
+    └─ export_tree.py              Mengubah Random Forest dari notebook jadi water_model.h untuk ESP32
 ```
 
 ## Kesesuaian dengan aturan tugas
@@ -136,12 +136,13 @@ Model jalan langsung di ESP32 sehingga tetap bekerja tanpa Wi-Fi:
 
 ```bash
 cd ml
-python export_tree.py --csv data/iot_project_dataset_2026-11-04.csv
+python export_tree.py --model models/random_forest.joblib
 ```
 
-Skrip ini melatih Random Forest kecil (10 tree, kedalaman maksimal 3, fitur `tds` dan `turb_v`), menampilkan
-akurasi di data uji (split waktu 80/20), lalu memakai [micromlgen](https://github.com/eloquentarduino/micromlgen)
-untuk menulis `firmware/iot_project/water_model.h`: tiap tree jadi `if-else` dan hasilnya di-voting (satu suara per tree). Jumlah tree dan kedalaman bisa diubah dengan `--trees` dan `--depth`. Upload ulang firmware.
+Jalankan notebook dulu: bagian akhirnya menyimpan Random Forest kecil (10 tree, kedalaman maksimal 3, fitur `tds`
+dan `turb_v`) ke `models/random_forest.joblib`. Skrip ini memuat model itu, mengecek vote ESP32 sama dengan sklearn,
+lalu memakai [micromlgen](https://github.com/eloquentarduino/micromlgen) untuk menulis
+`firmware/iot_project/water_model.h`: tiap tree jadi `if-else` dan hasilnya di-voting (satu suara per tree). Upload ulang firmware.
 ESP32 lalu menampilkan hasilnya di OLED (CLEAR / SLIGHT / DIRTY) dan mengirimnya sebagai field `ml` di data MQTT,
 bersama `ml_conf` (bagian tree yang setuju, 0 sampai 1), sehingga muncul di kartu prediksi dan grafik tren pada dashboard
 dan tersimpan di kolom `ml` / `ml_conf` database. Kalau mode auto nyala, prediksi `dirty` lima kali berturut-turut
